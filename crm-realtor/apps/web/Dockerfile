@@ -16,6 +16,11 @@ COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
 COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
+# Build-time arg: pass API URL so NEXT_PUBLIC_* gets baked in correctly
+ARG NEXT_PUBLIC_API_URL=http://localhost:3001
+ARG NEXT_PUBLIC_DEFAULT_LOCALE=ru
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_DEFAULT_LOCALE=$NEXT_PUBLIC_DEFAULT_LOCALE
 RUN pnpm --filter @crm/shared build 2>/dev/null || true
 RUN pnpm --filter @crm/web build
 
@@ -33,8 +38,10 @@ COPY --from=builder /app/apps/web/.next/standalone  ./
 COPY --from=builder /app/apps/web/.next/static      ./.next/static
 
 USER crm
+# PORT is overridden at runtime by Render/Railway (they inject their own PORT)
 EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
+# server.js reads PORT env var automatically (Next.js standalone)
 CMD ["node", "server.js"]

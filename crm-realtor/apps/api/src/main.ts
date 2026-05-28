@@ -15,14 +15,18 @@ async function bootstrap() {
   });
 
   const config = app.get(ConfigService);
-  const port = config.get<number>('API_PORT', 3001);
+  // PORT is injected by Render/Railway/Fly; API_PORT used locally
+  const port = Number(process.env.PORT ?? config.get<number>('API_PORT', 3001));
   const webOrigin = config.get<string>('WEB_ORIGIN');
 
   if (isProd && !webOrigin) {
-    throw new Error('WEB_ORIGIN must be set in production (comma-separated allowed origins)');
+    Logger.warn('WEB_ORIGIN not set — CORS will allow all origins. Set WEB_ORIGIN in production.', 'Bootstrap');
   }
 
-  const origins = (webOrigin ?? 'http://localhost:3000').split(',').map((s) => s.trim());
+  // true = allow all origins (CorsOptions accepts boolean | string | RegExp | ...)
+  const origins: string | string[] | boolean = webOrigin
+    ? webOrigin.split(',').map((s) => s.trim())
+    : true;
   // Security headers
   app.use((_req: import('express').Request, res: import('express').Response, next: import('express').NextFunction) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -34,7 +38,9 @@ async function bootstrap() {
 
   app.enableCors({
     origin: origins,
-    credentials: true,
+    credentials: typeof origins !== 'boolean',
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
   app.use(cookieParser());
