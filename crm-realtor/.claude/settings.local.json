@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell($ports = @\\(3000, 3001, 3002, 3003\\); foreach \\($p in $ports\\) { $r = Get-NetTCPConnection -LocalPort $p -State Listen -ErrorAction SilentlyContinue; if \\($r\\) { \"Port $p : LISTEN \\(PID $\\($r[0].OwningProcess\\)\\)\" } else { \"Port $p : free\" } })",
+      "PowerShell(Push-Location C:\\\\Projects\\\\crm_project; pnpm --filter \"@crm/api\" run build 2>&1 | Select-Object -Last 25; $code = $LASTEXITCODE; Pop-Location; \"exit=$code\")",
+      "PowerShell(Get-ChildItem C:\\\\Projects\\\\crm_project -Directory | Select-Object Name, @{N='SizeMB';E={[math]::Round\\(\\(Get-ChildItem $_.FullName -Recurse -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum\\).Sum / 1MB, 1\\)}} | Sort-Object SizeMB -Descending)",
+      "WebSearch",
+      "Bash(pnpm tsc *)",
+      "Bash(pnpm build *)",
+      "Bash(node -e ' *)",
+      "PowerShell(docker --version)",
+      "PowerShell(Get-NetTCPConnection -State Listen -LocalPort 3000,4000,5432,6379 -ErrorAction SilentlyContinue)",
+      "Bash(pnpm --filter @crm/api dev)",
+      "Bash(pnpm --filter @crm/web dev)",
+      "Bash(curl -sf -o /dev/null -w \"%{http_code}\" http://localhost:4000/health)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Projects\\\\crm_project\\\\apps\" -Directory)",
+      "Bash(Select-Object Name)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Projects\\\\crm_project\\\\apps\\\\api\\\\src\" -Recurse -File -Filter \"*.ts\" -o Name)",
+      "Bash(grep -r 'prisma\\\\.$transaction\\\\|@Cron\\\\|queue.enqueue' C:/Projects/crm_project/apps/api/src/modules '--include=*.ts' -n)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Projects\\\\crm_project\" -Recurse -Force)",
+      "Bash(Select-Object -First 50)",
+      "Bash(pnpm exec *)"
+    ]
+  }
+}
