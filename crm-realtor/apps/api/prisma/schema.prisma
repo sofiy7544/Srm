@@ -1,0 +1,700 @@
+// Real Estate CRM — single-tenant schema
+// Based on plan: /Users/fevverkiss/.claude/plans/senior-full-stack-refactored-gray.md
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============ Enums ============
+
+enum UserRole {
+  ADMIN
+  MANAGER
+  EMPLOYEE
+  REALTOR
+  ASSISTANT
+  ANALYST
+}
+
+enum Locale {
+  uk
+  ru
+}
+
+enum LeadStage {
+  NEW            // freshly captured, no contact yet
+  CONTACTED      // contact established, needs qualification (was FIRST_CONTACT + DIALOG)
+  QUALIFIED      // budget/timeline/area confirmed, picking properties (was SELECTION)
+  SHOWING        // visiting properties
+  NEGOTIATION    // price talk + contract (was NEGOTIATION + DEAL merged)
+  WON            // terminal — closed and signed (was CLOSED_WON)
+  LOST           // terminal — abandoned (was CLOSED_LOST, with lostReason field)
+}
+
+enum PropertyType {
+  APARTMENT
+  HOUSE
+  COMMERCIAL
+  LAND
+}
+
+enum PropertyStatus {
+  AVAILABLE
+  IN_SHOWING
+  RESERVED
+  SOLD
+  ARCHIVED
+}
+
+enum SourceType {
+  FB_LEAD_ADS
+  INSTAGRAM
+  WHATSAPP
+  TELEGRAM
+  WEBSITE
+  MANUAL
+  CSV_IMPORT
+  REFERRAL
+}
+
+enum ContactChannel {
+  WHATSAPP
+  TELEGRAM
+  INSTAGRAM
+  VIBER
+  EMAIL
+  PHONE
+}
+
+enum ActivityType {
+  CALL
+  WHATSAPP
+  EMAIL
+  TELEGRAM
+  INSTAGRAM
+  NOTE
+  SHOWING
+  STAGE_CHANGE
+  ASSIGNMENT
+}
+
+enum ActivityDirection {
+  IN
+  OUT
+  INTERNAL
+}
+
+enum TaskType {
+  CALL
+  SHOWING
+  FOLLOWUP
+  CUSTOM
+}
+
+enum TaskStatus {
+  PENDING
+  DONE
+  OVERDUE
+}
+
+enum DealStatus {
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum DealStage {
+  OFFER
+  DOCS_REVIEW
+  DUE_DILIGENCE
+  CONTRACT
+  CLOSED_WON
+  CLOSED_LOST
+}
+
+enum ShowingStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum PaymentType {
+  COMMISSION
+  BONUS
+  ADJUSTMENT
+}
+
+enum DocumentType {
+  PASSPORT
+  CONTRACT
+  RECEIPT
+  OTHER
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+}
+
+// ============ Core: Users ============
+
+model User {
+  id               String    @id @default(uuid()) @db.Uuid
+  email            String    @unique
+  passwordHash     String    @map("password_hash")
+  fullName         String    @map("full_name")
+  phone            String?
+  role             UserRole  @default(REALTOR)
+  locale           Locale    @default(uk)
+  isActive         Boolean   @default(true) @map("is_active")
+  isAvailable      Boolean   @default(true) @map("is_available")
+  telegramChatId   String?   @map("telegram_chat_id")
+  managerId        String?   @map("manager_id") @db.Uuid
+  emailVerifiedAt  DateTime? @map("email_verified_at")
+  lastLoginAt      DateTime? @map("last_login_at")
+  lastLoginIp      String?   @map("last_login_ip")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  manager                 User?                    @relation("UserManager", fields: [managerId], references: [id], onDelete: SetNull)
+  reports                 User[]                   @relation("UserManager")
+  assignedClients         Client[]                 @relation("ClientAssignee")
+  ownedProperties         Property[]               @relation("PropertyOwner")
+  assignedLeads           Lead[]                   @relation("LeadAssignee")
+  deals                   Deal[]
+  activities              Activity[]
+  tasks                   Task[]
+  showings                Showing[]
+  payments                Payment[]
+  commissionPlans         CommissionPlan[]
+  uploadedDocs            Document[]               @relation("DocumentUploader")
+  notifications           Notification[]
+  auditLogs               AuditLog[]
+  refreshTokens           RefreshToken[]
+  emailVerificationTokens EmailVerificationToken[]
+  passwordResetTokens     PasswordResetToken[]
+  sentInvitations         TeamInvitation[]         @relation("InvitedBy")
+
+  @@index([managerId])
+  @@map("users")
+}
+
+// ============ Email: Verification / Reset / Invitations / Logs ============
+
+model EmailVerificationToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("email_verification_tokens")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  requestIp String?   @map("request_ip")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  REVOKED
+  EXPIRED
+}
+
+model TeamInvitation {
+  id          String           @id @default(uuid()) @db.Uuid
+  email       String
+  role        UserRole         @default(REALTOR)
+  tokenHash   String           @unique @map("token_hash")
+  invitedById String           @map("invited_by_id") @db.Uuid
+  status      InvitationStatus @default(PENDING)
+  expiresAt   DateTime         @map("expires_at")
+  acceptedAt  DateTime?        @map("accepted_at")
+  createdAt   DateTime         @default(now()) @map("created_at")
+
+  invitedBy User @relation("InvitedBy", fields: [invitedById], references: [id], onDelete: Cascade)
+
+  @@index([email])
+  @@index([status])
+  @@map("team_invitations")
+}
+
+enum EmailStatus {
+  QUEUED
+  SENT
+  FAILED
+}
+
+model EmailLog {
+  id           String      @id @default(uuid()) @db.Uuid
+  toAddress    String      @map("to_address")
+  fromAddress  String      @map("from_address")
+  subject      String
+  template     String
+  providerId   String?     @map("provider_id")
+  status       EmailStatus @default(QUEUED)
+  errorMessage String?     @map("error_message")
+  attempts     Int         @default(0)
+  metadata     Json?
+  createdAt    DateTime    @default(now()) @map("created_at")
+  sentAt       DateTime?   @map("sent_at")
+
+  @@index([toAddress])
+  @@index([template])
+  @@index([status])
+  @@map("email_logs")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  tokenHash String   @unique @map("token_hash")
+  expiresAt DateTime @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+// ============ Core: Sources ============
+
+model Source {
+  id        String     @id @default(uuid()) @db.Uuid
+  name      String     @unique
+  type      SourceType
+  utmData   Json?      @map("utm_data")
+  isActive  Boolean    @default(true) @map("is_active")
+  createdAt DateTime   @default(now()) @map("created_at")
+
+  clients Client[]
+  leads   Lead[]
+
+  @@map("sources")
+}
+
+// ============ Core: Clients ============
+
+model Client {
+  id               String   @id @default(uuid()) @db.Uuid
+  fullName         String   @map("full_name")
+  primaryPhone     String   @unique @map("primary_phone")
+  email            String?
+  avatarUrl        String?  @map("avatar_url")
+  sourceId         String?  @map("source_id") @db.Uuid
+  assignedUserId   String?  @map("assigned_user_id") @db.Uuid
+  notes            String?
+  isArchived       Boolean  @default(false) @map("is_archived")
+  isBlacklisted    Boolean  @default(false) @map("is_blacklisted")
+  marketingConsent Boolean  @default(false) @map("marketing_consent")
+  consentTimestamp DateTime? @map("consent_timestamp")
+  consentVersion   String?   @map("consent_version")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  source          Source?            @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  assignedUser    User?              @relation("ClientAssignee", fields: [assignedUserId], references: [id], onDelete: SetNull)
+  contacts        ClientContact[]
+  preferences     ClientPreferences?
+  leads           Lead[]
+  deals           Deal[]
+  activities      Activity[]
+  tasks           Task[]
+  showings        Showing[]
+  documents       Document[]
+
+  @@index([assignedUserId, createdAt])
+  @@index([sourceId])
+  @@index([isArchived])
+  @@index([isBlacklisted])
+  @@map("clients")
+}
+
+model ClientContact {
+  id         String         @id @default(uuid()) @db.Uuid
+  clientId   String         @map("client_id") @db.Uuid
+  channel    ContactChannel
+  identifier String
+  isPrimary  Boolean        @default(false) @map("is_primary")
+  createdAt  DateTime       @default(now()) @map("created_at")
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([clientId, channel, identifier])
+  @@index([channel, identifier])
+  @@map("client_contacts")
+}
+
+enum DealIntent {
+  BUY
+  RENT
+}
+
+model ClientPreferences {
+  clientId     String        @id @map("client_id") @db.Uuid
+  propertyType PropertyType?
+  dealIntent   DealIntent?   @map("deal_intent")
+  currency     String?       @default("UAH") @db.VarChar(3)
+  districts    String[]      @default([])
+  roomsMin     Int?          @map("rooms_min")
+  roomsMax     Int?          @map("rooms_max")
+  priceMin     Decimal?      @map("price_min") @db.Decimal(14, 2)
+  priceMax     Decimal?      @map("price_max") @db.Decimal(14, 2)
+  areaMin      Decimal?      @map("area_min") @db.Decimal(10, 2)
+  areaMax      Decimal?      @map("area_max") @db.Decimal(10, 2)
+  extra        Json?
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@map("client_preferences")
+}
+
+// ============ Core: Properties ============
+
+model Property {
+  id           String         @id @default(uuid()) @db.Uuid
+  type         PropertyType
+  dealIntent   DealIntent     @default(BUY) @map("deal_intent")
+  district     String
+  address      String
+  rooms        Int?
+  floor        Int?
+  totalFloors  Int?           @map("total_floors")
+  area         Decimal        @db.Decimal(10, 2)
+  price        Decimal        @db.Decimal(14, 2)
+  currency     String         @default("UAH") @db.VarChar(3)
+  status       PropertyStatus @default(AVAILABLE)
+  ownerUserId  String?        @map("owner_user_id") @db.Uuid
+  description  String?
+  features     Json?
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @updatedAt @map("updated_at")
+
+  owner    User?           @relation("PropertyOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
+  photos   PropertyPhoto[]
+  leads    Lead[]
+  deals    Deal[]
+  showings Showing[]
+  documents Document[]
+
+  @@index([status, district, price])
+  @@index([type])
+  @@index([dealIntent, status])
+  @@map("properties")
+}
+
+model PropertyPhoto {
+  id         String            @id @default(uuid()) @db.Uuid
+  propertyId String            @map("property_id") @db.Uuid
+  url        String
+  kind       PropertyMediaKind @default(PHOTO)
+  order      Int               @default(0)
+  isCover    Boolean           @default(false) @map("is_cover")
+  createdAt  DateTime          @default(now()) @map("created_at")
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId, order])
+  @@map("property_photos")
+}
+
+enum PropertyMediaKind {
+  PHOTO
+  VIDEO
+}
+
+// ============ Core: Leads ============
+
+model Lead {
+  id                  String     @id @default(uuid()) @db.Uuid
+  clientId            String     @map("client_id") @db.Uuid
+  sourceId            String?    @map("source_id") @db.Uuid
+  assignedUserId      String?    @map("assigned_user_id") @db.Uuid
+  stage               LeadStage  @default(NEW)
+  dealIntent          DealIntent @default(BUY) @map("deal_intent")
+  interestPropertyId  String?    @map("interest_property_id") @db.Uuid
+  interestNote        String?    @map("interest_note")
+  interestPhotoUrl    String?    @map("interest_photo_url")
+  lostReason          String?    @map("lost_reason")
+  priority            String?    @default("warm") @map("priority")
+  stageChangedAt      DateTime   @default(now()) @map("stage_changed_at")
+  lastActivityAt      DateTime   @default(now()) @map("last_activity_at")
+  lostAt              DateTime?  @map("lost_at")
+  createdAt           DateTime   @default(now()) @map("created_at")
+  updatedAt           DateTime   @updatedAt @map("updated_at")
+
+  client            Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  source            Source?   @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  assignedUser      User?     @relation("LeadAssignee", fields: [assignedUserId], references: [id], onDelete: SetNull)
+  interestProperty  Property? @relation(fields: [interestPropertyId], references: [id], onDelete: SetNull)
+  deal              Deal?
+  activities        Activity[]
+  tasks             Task[]
+
+  @@index([stage, assignedUserId])
+  @@index([stageChangedAt])
+  @@index([clientId])
+  @@index([dealIntent, stage])
+  @@index([lastActivityAt])
+  @@map("leads")
+}
+
+// ============ Core: Deals ============
+
+model Deal {
+  id                String     @id @default(uuid()) @db.Uuid
+  leadId            String     @unique @map("lead_id") @db.Uuid
+  clientId          String     @map("client_id") @db.Uuid
+  propertyId        String     @map("property_id") @db.Uuid
+  agentId           String     @map("agent_id") @db.Uuid
+  dealIntent        DealIntent @default(BUY) @map("deal_intent")
+  amount            Decimal    @db.Decimal(14, 2)
+  commissionPercent Decimal    @map("commission_percent") @db.Decimal(5, 2)
+  commissionAmount  Decimal    @map("commission_amount") @db.Decimal(14, 2)
+  status            DealStatus @default(IN_PROGRESS)
+  stage             DealStage  @default(OFFER)
+  closedAt          DateTime?  @map("closed_at")
+  createdAt         DateTime   @default(now()) @map("created_at")
+  updatedAt         DateTime   @updatedAt @map("updated_at")
+
+  lead     Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  client   Client    @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  property Property  @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  agent    User      @relation(fields: [agentId], references: [id], onDelete: Restrict)
+  payments Payment[]
+  documents Document[]
+
+  @@index([agentId, status])
+  @@index([closedAt])
+  @@map("deals")
+}
+
+// ============ Communication ============
+
+model Activity {
+  id        String            @id @default(uuid()) @db.Uuid
+  clientId  String            @map("client_id") @db.Uuid
+  leadId    String?           @map("lead_id") @db.Uuid
+  userId    String?           @map("user_id") @db.Uuid
+  type      ActivityType
+  direction ActivityDirection @default(INTERNAL)
+  content   String?
+  metadata  Json?
+  createdAt DateTime          @default(now()) @map("created_at")
+
+  client   Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  lead     Lead?     @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  user     User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  message  Message?
+
+  @@index([clientId, createdAt(sort: Desc)])
+  @@index([leadId])
+  @@map("activities")
+}
+
+model Message {
+  id          String         @id @default(uuid()) @db.Uuid
+  activityId  String         @unique @map("activity_id") @db.Uuid
+  channel     ContactChannel
+  externalId  String?        @map("external_id")
+  from        String?
+  to          String?
+  body        String?
+  attachments Json?
+  deliveredAt DateTime?      @map("delivered_at")
+  readAt      DateTime?      @map("read_at")
+  createdAt   DateTime       @default(now()) @map("created_at")
+
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@unique([channel, externalId])
+  @@map("messages")
+}
+
+// ============ Tasks & Showings ============
+
+model Task {
+  id          String     @id @default(uuid()) @db.Uuid
+  userId      String     @map("user_id") @db.Uuid
+  clientId    String?    @map("client_id") @db.Uuid
+  leadId      String?    @map("lead_id") @db.Uuid
+  title       String
+  description String?
+  type        TaskType   @default(CUSTOM)
+  dueAt       DateTime   @map("due_at")
+  status      TaskStatus @default(PENDING)
+  completedAt DateTime?  @map("completed_at")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  lead   Lead?   @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
+  @@index([userId, status, dueAt])
+  @@map("tasks")
+}
+
+model Showing {
+  id           String        @id @default(uuid()) @db.Uuid
+  propertyId   String        @map("property_id") @db.Uuid
+  clientId     String        @map("client_id") @db.Uuid
+  agentId      String        @map("agent_id") @db.Uuid
+  scheduledAt  DateTime      @map("scheduled_at")
+  durationMin  Int           @default(60) @map("duration_min")
+  status       ShowingStatus @default(SCHEDULED)
+  feedback     String?
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  client   Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  agent    User     @relation(fields: [agentId], references: [id], onDelete: Restrict)
+
+  @@index([agentId, scheduledAt])
+  @@index([propertyId, scheduledAt])
+  @@map("showings")
+}
+
+// ============ Finance ============
+
+model Payment {
+  id        String      @id @default(uuid()) @db.Uuid
+  dealId    String      @map("deal_id") @db.Uuid
+  userId    String      @map("user_id") @db.Uuid
+  amount    Decimal     @db.Decimal(14, 2)
+  type      PaymentType @default(COMMISSION)
+  paidAt    DateTime    @map("paid_at")
+  note      String?
+  createdAt DateTime    @default(now()) @map("created_at")
+
+  deal Deal @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([userId, paidAt])
+  @@map("payments")
+}
+
+model CommissionPlan {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  periodMonth DateTime @map("period_month") @db.Date
+  planAmount  Decimal  @map("plan_amount") @db.Decimal(14, 2)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, periodMonth])
+  @@map("commission_plans")
+}
+
+// ============ Documents ============
+
+model Document {
+  id           String       @id @default(uuid()) @db.Uuid
+  clientId     String?      @map("client_id") @db.Uuid
+  dealId       String?      @map("deal_id") @db.Uuid
+  propertyId   String?      @map("property_id") @db.Uuid
+  type         DocumentType @default(OTHER)
+  fileUrl      String       @map("file_url")
+  originalName String       @map("original_name")
+  mime         String
+  uploadedById String       @map("uploaded_by_id") @db.Uuid
+  createdAt    DateTime     @default(now()) @map("created_at")
+
+  client     Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  deal       Deal?     @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  property   Property? @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+  uploadedBy User      @relation("DocumentUploader", fields: [uploadedById], references: [id], onDelete: Restrict)
+
+  @@index([clientId])
+  @@index([dealId])
+  @@map("documents")
+}
+
+model ContractTemplate {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  language  Locale   @default(uk)
+  content   String
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([name])
+  @@map("contract_templates")
+}
+
+// ============ Notifications & Audit ============
+
+model Notification {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  type      String
+  title     String
+  body      String?
+  link      String?
+  isRead    Boolean  @default(false) @map("is_read")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead, createdAt(sort: Desc)])
+  @@map("notifications")
+}
+
+model AuditLog {
+  id         String      @id @default(uuid()) @db.Uuid
+  userId     String?     @map("user_id") @db.Uuid
+  entityType String      @map("entity_type")
+  entityId   String      @map("entity_id")
+  action     AuditAction
+  changes    Json?
+  createdAt  DateTime    @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId])
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("audit_log")
+}
+
+// ============ Automation ============
+
+model AutomationRule {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  condition Json
+  action    Json
+  priority  Int      @default(0)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("automation_rules")
+}

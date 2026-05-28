@@ -1,0 +1,10 @@
+{
+  "framework": "nextjs",
+  "buildCommand": "cd ../.. && pnpm --filter @crm/shared build && pnpm --filter @crm/web build",
+  "outputDirectory": "apps/web/.next",
+  "installCommand": "npm install -g corepack && corepack enable pnpm && pnpm install --frozen-lockfile",
+  "env": {
+    "NEXT_PUBLIC_API_URL": "@api_url",
+    "NEXT_PUBLIC_DEFAULT_LOCALE": "ru"
+  }
+}

@@ -1,0 +1,16 @@
+<div class="body">
+  <h1>New sign-in to your account</h1>
+  <p>Hi {{fullName}}, your {{appName}} account was just accessed. If this was you, no action is needed.</p>
+</div>
+<div class="meta">
+  <span class="meta-row"><span class="meta-key">When:</span> {{loginAt}}</span>
+  {{#if ip}}<span class="meta-row"><span class="meta-key">IP:</span> {{ip}}</span>{{/if}}
+  {{#if location}}<span class="meta-row"><span class="meta-key">Location:</span> {{location}}</span>{{/if}}
+  {{#if userAgent}}<span class="meta-row"><span class="meta-key">Device:</span> {{userAgent}}</span>{{/if}}
+</div>
+<div class="body">
+  <p class="muted">Don't recognize this sign-in? Secure your account immediately — change your password and review your active sessions.</p>
+</div>
+<div class="cta-wrap">
+  <a href="{{secureUrl}}" class="cta">Secure my account</a>
+</div>

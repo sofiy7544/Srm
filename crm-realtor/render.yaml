@@ -1,0 +1,63 @@
+services:
+  # ─── NestJS API ─────────────────────────────────────────────────────────────
+  - type: web
+    name: crm-api
+    runtime: docker
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: crm-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: crm-redis
+          type: redis
+          property: connectionString
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: API_PORT
+        value: "3001"
+      - key: MINIO_ENDPOINT
+        sync: false
+      - key: MINIO_ROOT_USER
+        sync: false
+      - key: MINIO_ROOT_PASSWORD
+        sync: false
+      - key: MINIO_BUCKET
+        value: crm-uploads
+      - key: RESEND_API_KEY
+        sync: false
+      - key: DEFAULT_LOCALE
+        value: ru
+
+  # ─── Next.js Web ─────────────────────────────────────────────────────────────
+  - type: web
+    name: crm-web
+    runtime: docker
+    dockerfilePath: ./apps/web/Dockerfile
+    dockerContext: .
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_API_URL
+        fromService:
+          name: crm-api
+          type: web
+          property: url
+      - key: NEXT_PUBLIC_DEFAULT_LOCALE
+        value: ru
+
+databases:
+  - name: crm-postgres
+    databaseName: crm
+    user: crm
+
+  - name: crm-redis
+    type: redis

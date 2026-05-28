@@ -1,0 +1,13 @@
+# macOS metadata
+._*
+.DS_Store
+
+# Backup archives
+*.tar.gz
+*.zip
+*.tar.bz2
+
+# Environment files (also enforced by crm-realtor/.gitignore)
+.env
+.env.local
+.env.*.local
