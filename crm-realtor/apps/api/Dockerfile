@@ -1,6 +1,8 @@
 # ──── Stage 1: deps ────
 FROM node:22-alpine AS deps
 WORKDIR /app
+# Prisma postinstall needs OpenSSL to detect the correct engine binary variant
+RUN apk add --no-cache openssl
 RUN npm install -g corepack && corepack enable pnpm
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY apps/api/package.json ./apps/api/
