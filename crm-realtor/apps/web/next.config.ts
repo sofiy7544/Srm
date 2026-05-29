@@ -1,10 +1,15 @@
 import type { NextConfig } from 'next';
+import path from 'node:path';
 import createNextIntlPlugin from 'next-intl/plugin';
 
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  // pnpm-монорепо: трейсим standalone от корня воркспейса, иначе server.js и
+  // зависимости из общего node_modules собираются непредсказуемо. С этим
+  // server.js оказывается в .next/standalone/apps/web/server.js.
+  outputFileTracingRoot: path.join(__dirname, '../../'),
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: 'i.pravatar.cc' },
