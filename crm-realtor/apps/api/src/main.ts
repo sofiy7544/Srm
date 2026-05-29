@@ -57,7 +57,9 @@ async function bootstrap() {
   // maps Prisma errors to sensible HTTP statuses, logs everything server-side.
   app.useGlobalFilters(new AllExceptionsFilter());
 
-  await app.listen(port);
+  // Bind 0.0.0.0 — иначе на Railway/Docker сервер слушает только localhost
+  // и внешний healthcheck (/api/health) не достучится → деплой падает.
+  await app.listen(port, '0.0.0.0');
   Logger.log(`API ready at http://localhost:${port}/api`, 'Bootstrap');
 }
 
