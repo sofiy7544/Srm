@@ -16,6 +16,9 @@ COPY --from=deps /app/apps/api/node_modules ./apps/api/node_modules
 COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
 COPY . .
 RUN pnpm --filter @crm/shared build 2>/dev/null || true
+# Генерируем Prisma Client до tsc — иначе типы (@prisma/client: enum'ы, классы
+# ошибок Prisma) отсутствуют и сборка падает с TS-ошибками.
+RUN pnpm --filter @crm/api run prisma:generate
 RUN pnpm --filter @crm/api build
 
 # ──── Stage 3: production image ────
