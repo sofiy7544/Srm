@@ -42,8 +42,11 @@ RUN npm install -g corepack && corepack enable pnpm
 COPY --from=builder /app/apps/api/package.json ./apps/api/
 COPY --from=builder /app/apps/api/dist          ./apps/api/dist
 COPY --from=builder /app/apps/api/prisma        ./apps/api/prisma
-COPY --from=deps    /app/apps/api/node_modules  ./apps/api/node_modules
-COPY --from=deps    /app/node_modules           ./node_modules
+# node_modules берём из builder (а НЕ deps): там лежит сгенерированный Prisma
+# Client (prisma generate отрабатывает в builder). Иначе runner стартует со
+# stub-клиентом, new PrismaClient() падает молча и healthcheck не проходит.
+COPY --from=builder /app/apps/api/node_modules  ./apps/api/node_modules
+COPY --from=builder /app/node_modules           ./node_modules
 COPY --from=builder /app/packages               ./packages
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/pnpm-workspace.yaml ./
