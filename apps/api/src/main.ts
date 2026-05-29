@@ -15,7 +15,9 @@ async function bootstrap() {
   });
 
   const config = app.get(ConfigService);
-  const port = config.get<number>('API_PORT', 3001);
+  // PORT задают платформы (Railway/Render/Heroku) — он в приоритете;
+  // API_PORT — наш дефолт для локалки и docker-compose.
+  const port = config.get<number>('PORT') ?? config.get<number>('API_PORT', 3001);
   const webOrigin = config.get<string>('WEB_ORIGIN');
 
   if (isProd && !webOrigin) {
