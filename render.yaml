@@ -1,0 +1,98 @@
+# Render Blueprint для Realtor CRM
+# ─────────────────────────────────────────────────────────────────────────────
+# Деплой в один клик: https://render.com  →  New +  →  Blueprint  →  выбрать
+# этот репозиторий. Render прочитает этот файл и поднимет всё разом:
+#   • crm-api   — NestJS backend (Docker)        → https://crm-api-XXXX.onrender.com
+#   • crm-web   — Next.js frontend (Docker)      → https://crm-web-XXXX.onrender.com  ← ваш домен
+#   • crm-db    — управляемый PostgreSQL 16
+#   • crm-redis — управляемый Redis (очереди BullMQ)
+#
+# После первого деплоя:
+#   1. Скопируйте публичный URL сервиса crm-api.
+#   2. В сервисе crm-web задайте env-переменную NEXT_PUBLIC_API_URL = этот URL
+#      и нажмите Manual Deploy (она вшивается в сборку Next.js).
+#   3. В crm-api задайте WEB_ORIGIN = публичный URL crm-web (для CORS).
+#
+# Примечание: загрузка файлов (MinIO/S3) тут не настроена — основной CRM работает
+# и без неё. Для файлов подключите внешний S3 и добавьте AWS_* переменные в crm-api.
+# ─────────────────────────────────────────────────────────────────────────────
+
+databases:
+  - name: crm-db
+    databaseName: crm
+    user: crm
+    plan: free
+
+services:
+  # ── Redis (очереди / кеш) ──────────────────────────────────────────────────
+  - type: redis
+    name: crm-redis
+    plan: free
+    ipAllowList: []          # доступ только из приватной сети Render
+    maxmemoryPolicy: noeviction
+
+  # ── Backend API (NestJS) ────────────────────────────────────────────────────
+  - type: web
+    name: crm-api
+    runtime: docker
+    plan: free
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health      # глобальный префикс приложения — /api
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: API_PORT
+        value: "3001"                 # Render определит открытый порт автоматически
+      - key: TRUST_PROXY
+        value: "true"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: crm-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: crm-redis
+          property: connectionString
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: JWT_ACCESS_TTL
+        value: 15m
+      - key: JWT_REFRESH_TTL
+        value: 30d
+      - key: NEXT_PUBLIC_DEFAULT_LOCALE
+        value: ru
+      # CORS-allowlist. По умолчанию — конвенциональный URL crm-web. Если Render
+      # выдал сервису crm-web другой адрес (с суффиксом), впишите реальный URL.
+      - key: WEB_ORIGIN
+        value: https://crm-web.onrender.com
+      # Опционально — email через Resend:
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        value: onboarding@resend.dev
+      - key: APP_NAME
+        value: Realtor CRM
+
+  # ── Frontend (Next.js) ───────────────────────────────────────────────────────
+  - type: web
+    name: crm-web
+    runtime: docker
+    plan: free
+    dockerfilePath: ./apps/web/Dockerfile
+    dockerContext: .
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "3000"
+      - key: NEXT_PUBLIC_DEFAULT_LOCALE
+        value: ru
+      # ВАЖНО: вшивается в сборку Next.js. По умолчанию — конвенциональный URL
+      # crm-api. Если Render выдал другой адрес — впишите реальный и сделайте
+      # Manual Deploy (значение применяется только при пересборке).
+      - key: NEXT_PUBLIC_API_URL
+        value: https://crm-api.onrender.com
