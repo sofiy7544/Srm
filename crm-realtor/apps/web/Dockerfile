@@ -33,9 +33,11 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 crm && \
     adduser --system --uid 1001 crm
 
-COPY --from=builder /app/apps/web/public           ./public
+# С outputFileTracingRoot=<корень монорепо> standalone сохраняет структуру
+# воркспейса: server.js → apps/web/server.js, node_modules — в корне standalone.
 COPY --from=builder /app/apps/web/.next/standalone  ./
-COPY --from=builder /app/apps/web/.next/static      ./.next/static
+COPY --from=builder /app/apps/web/.next/static      ./apps/web/.next/static
+COPY --from=builder /app/apps/web/public            ./apps/web/public
 
 USER crm
 # PORT is overridden at runtime by Render/Railway (they inject their own PORT)
@@ -44,4 +46,4 @@ ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
 # server.js reads PORT env var automatically (Next.js standalone)
-CMD ["node", "server.js"]
+CMD ["node", "apps/web/server.js"]
