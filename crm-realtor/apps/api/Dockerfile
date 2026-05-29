@@ -10,6 +10,8 @@ RUN pnpm install --frozen-lockfile
 # ──── Stage 2: build ────
 FROM node:22-alpine AS builder
 WORKDIR /app
+# Prisma на Alpine требует OpenSSL для генерации/работы движка
+RUN apk add --no-cache openssl
 RUN npm install -g corepack && corepack enable pnpm
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/apps/api/node_modules ./apps/api/node_modules
@@ -25,6 +27,10 @@ RUN pnpm --filter @crm/api build
 FROM node:22-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
+# npx/npm пишут кеш в HOME; у non-root юзера его нет — направляем в /tmp
+ENV npm_config_cache=/tmp/.npm
+# Prisma на Alpine требует OpenSSL в рантайме (иначе query engine не стартует)
+RUN apk add --no-cache openssl
 
 RUN addgroup --system --gid 1001 crm && \
     adduser --system --uid 1001 crm
@@ -39,6 +45,10 @@ COPY --from=deps    /app/node_modules           ./node_modules
 COPY --from=builder /app/packages               ./packages
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/pnpm-workspace.yaml ./
+
+# Отдаём весь /app non-root юзеру: prisma migrate deploy пишет во временные
+# файлы node_modules, иначе падает с EACCES под пользователем crm.
+RUN chown -R crm:crm /app
 
 USER crm
 WORKDIR /app/apps/api
