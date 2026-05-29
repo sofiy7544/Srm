@@ -59,5 +59,5 @@ USER crm
 WORKDIR /app/apps/api
 EXPOSE 3001
 
-# Run migrations then start
-CMD sh -c "npx prisma migrate deploy && node dist/main.js"
+# Run migrations then start (exec-форма: одна оболочка sh -c, && срабатывает)
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main.js"]
