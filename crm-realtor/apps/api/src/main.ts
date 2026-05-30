@@ -60,29 +60,28 @@ async function bootstrap() {
   // maps Prisma errors to sensible HTTP statuses, logs everything server-side.
   app.useGlobalFilters(new AllExceptionsFilter());
 
-  // Бутстрап первого админа: гарантируем, что учётка admin существует (upsert по
-  // email). Если уже есть — ничего не меняем (пароль не трогаем). Если нет —
-  // создаём ADMIN из env (дефолты admin@crm.local / admin12345). Идемпотентно.
+  // Бутстрап админа: гарантируем, что учётка admin существует, активна и имеет
+  // известный пароль. upsert по email с обновлением passwordHash/role/isActive —
+  // чтобы вход admin@crm.local / admin12345 работал даже если запись была
+  // создана ранее с другим паролем. ВАЖНО: смените пароль после первого входа.
   try {
     const prisma = app.get(PrismaService);
     const email = process.env.INITIAL_ADMIN_EMAIL ?? 'admin@crm.local';
     const password = process.env.INITIAL_ADMIN_PASSWORD ?? 'admin12345';
-    const existing = await prisma.user.findUnique({ where: { email } });
-    if (!existing) {
-      await prisma.user.create({
-        data: {
-          email,
-          passwordHash: await argon2.hash(password),
-          fullName: process.env.INITIAL_ADMIN_NAME ?? 'Admin',
-          role: UserRole.ADMIN,
-        },
-      });
-      Logger.warn(`Создан первый админ: ${email} (смените пароль после входа)`, 'Bootstrap');
-    } else {
-      Logger.log(`Админ ${email} уже существует — пропускаем создание`, 'Bootstrap');
-    }
+    const passwordHash = await argon2.hash(password);
+    await prisma.user.upsert({
+      where: { email },
+      update: { passwordHash, role: UserRole.ADMIN, isActive: true },
+      create: {
+        email,
+        passwordHash,
+        fullName: process.env.INITIAL_ADMIN_NAME ?? 'Admin',
+        role: UserRole.ADMIN,
+      },
+    });
+    Logger.warn(`Админ готов: ${email} (пароль выставлен из env — смените после входа)`, 'Bootstrap');
   } catch (e) {
-    Logger.error(`Не удалось создать первого админа: ${(e as Error).message}`, 'Bootstrap');
+    Logger.error(`Не удалось обеспечить админа: ${(e as Error).message}`, 'Bootstrap');
   }
 
   // Bind 0.0.0.0 — иначе на Railway/Docker сервер слушает только localhost
