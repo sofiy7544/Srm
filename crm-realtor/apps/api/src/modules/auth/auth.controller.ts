@@ -149,7 +149,10 @@ export class AuthController {
     const base = {
       httpOnly: true,
       secure: isProd,
-      sameSite: 'lax' as const,
+      // Фронт и API на разных доменах (*.up.railway.app, *.vercel.app) — это
+      // cross-site. Чтобы куки авторизации отправлялись на API, в проде нужен
+      // SameSite=None (только с Secure). Локально (http) — Lax.
+      sameSite: (isProd ? 'none' : 'lax') as 'none' | 'lax',
       path: '/',
     };
     res.cookie(ACCESS_COOKIE, access, { ...base, maxAge: 15 * 60 * 1000 });
