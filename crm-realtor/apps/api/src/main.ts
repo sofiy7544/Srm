@@ -60,14 +60,15 @@ async function bootstrap() {
   // maps Prisma errors to sensible HTTP statuses, logs everything server-side.
   app.useGlobalFilters(new AllExceptionsFilter());
 
-  // Бутстрап первого админа: если в базе нет ни одного пользователя, создаём
-  // администратора из env (с дефолтами). Идемпотентно — на пустой БД один раз.
+  // Бутстрап первого админа: гарантируем, что учётка admin существует (upsert по
+  // email). Если уже есть — ничего не меняем (пароль не трогаем). Если нет —
+  // создаём ADMIN из env (дефолты admin@crm.local / admin12345). Идемпотентно.
   try {
     const prisma = app.get(PrismaService);
-    const userCount = await prisma.user.count();
-    if (userCount === 0) {
-      const email = process.env.INITIAL_ADMIN_EMAIL ?? 'admin@crm.local';
-      const password = process.env.INITIAL_ADMIN_PASSWORD ?? 'admin12345';
+    const email = process.env.INITIAL_ADMIN_EMAIL ?? 'admin@crm.local';
+    const password = process.env.INITIAL_ADMIN_PASSWORD ?? 'admin12345';
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (!existing) {
       await prisma.user.create({
         data: {
           email,
@@ -77,6 +78,8 @@ async function bootstrap() {
         },
       });
       Logger.warn(`Создан первый админ: ${email} (смените пароль после входа)`, 'Bootstrap');
+    } else {
+      Logger.log(`Админ ${email} уже существует — пропускаем создание`, 'Bootstrap');
     }
   } catch (e) {
     Logger.error(`Не удалось создать первого админа: ${(e as Error).message}`, 'Bootstrap');

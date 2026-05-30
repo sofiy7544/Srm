@@ -86,7 +86,11 @@ export async function api<T = unknown>(
     credentials: 'include',
   });
 
-  if (res.status === 401 && !retried) {
+  // 401 на самих auth-эндпоинтах (login/refresh/logout) — это просто неверные
+  // данные, НЕ истёкшая сессия. Не пытаемся рефрешить и не трогаем cookie,
+  // иначе на странице логина возникает побочный ре-рендер и ошибка «мелькает».
+  const isAuthCall = path.startsWith('/api/auth/');
+  if (res.status === 401 && !retried && !isAuthCall) {
     const refreshed = await refreshAccessToken();
     if (refreshed) return api<T>(path, init, true);
     clearLoggedIn();
