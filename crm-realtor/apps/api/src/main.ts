@@ -3,7 +3,10 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import cookieParser from 'cookie-parser';
+import * as argon2 from 'argon2';
+import { UserRole } from '@prisma/client';
 import { AppModule } from './app.module';
+import { PrismaService } from './prisma/prisma.service';
 import { AllExceptionsFilter } from './common/all-exceptions.filter';
 
 async function bootstrap() {
@@ -56,6 +59,28 @@ async function bootstrap() {
   // Catch-all exception filter — never leaks internal details in production,
   // maps Prisma errors to sensible HTTP statuses, logs everything server-side.
   app.useGlobalFilters(new AllExceptionsFilter());
+
+  // Бутстрап первого админа: если в базе нет ни одного пользователя, создаём
+  // администратора из env (с дефолтами). Идемпотентно — на пустой БД один раз.
+  try {
+    const prisma = app.get(PrismaService);
+    const userCount = await prisma.user.count();
+    if (userCount === 0) {
+      const email = process.env.INITIAL_ADMIN_EMAIL ?? 'admin@crm.local';
+      const password = process.env.INITIAL_ADMIN_PASSWORD ?? 'admin12345';
+      await prisma.user.create({
+        data: {
+          email,
+          passwordHash: await argon2.hash(password),
+          fullName: process.env.INITIAL_ADMIN_NAME ?? 'Admin',
+          role: UserRole.ADMIN,
+        },
+      });
+      Logger.warn(`Создан первый админ: ${email} (смените пароль после входа)`, 'Bootstrap');
+    }
+  } catch (e) {
+    Logger.error(`Не удалось создать первого админа: ${(e as Error).message}`, 'Bootstrap');
+  }
 
   // Bind 0.0.0.0 — иначе на Railway/Docker сервер слушает только localhost
   // и внешний healthcheck (/api/health) не достучится → деплой падает.
