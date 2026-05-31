@@ -26,10 +26,6 @@ async function bootstrap() {
     Logger.warn('WEB_ORIGIN not set — CORS will allow all origins. Set WEB_ORIGIN in production.', 'Bootstrap');
   }
 
-  // true = allow all origins (CorsOptions accepts boolean | string | RegExp | ...)
-  const origins: string | string[] | boolean = webOrigin
-    ? webOrigin.split(',').map((s) => s.trim())
-    : true;
   // Security headers
   app.use((_req: import('express').Request, res: import('express').Response, next: import('express').NextFunction) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -39,9 +35,18 @@ async function bootstrap() {
     next();
   });
 
+  // CORS с credentials (cookie-аутентификация cross-site). Если WEB_ORIGIN задан —
+  // разрешаем только эти источники; если нет — отражаем Origin запроса (нельзя
+  // ставить '*' вместе с credentials). credentials всегда true, иначе браузер
+  // не сохранит httpOnly-cookie логина и сессия не держится.
+  const allowList = webOrigin ? webOrigin.split(',').map((s) => s.trim()) : null;
   app.enableCors({
-    origin: origins,
-    credentials: typeof origins !== 'boolean',
+    origin: (origin, cb) => {
+      if (!origin) return cb(null, true); // server-to-server / curl
+      if (!allowList || allowList.includes(origin)) return cb(null, true);
+      return cb(null, false);
+    },
+    credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   });
