@@ -4,8 +4,11 @@
 // once the team grows past one developer. Keep `import { ... } from '@/lib/api'`
 // working as the public surface — extract into a barrel index.ts.
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+// Санитизация: убираем случайные угловые скобки (часто прилетают при копировании
+// вида <https://...>), кавычки, пробелы и хвостовой слэш — иначе fetch получает
+// невалидный URL и запрос молча не уходит.
+const RAW_API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+const API_BASE = RAW_API_BASE.trim().replace(/^[<"'\s]+|[>"'\s]+$/g, '').replace(/\/+$/, '');
 
 export type UserBrief = { id: string; email: string; role: string };
 
