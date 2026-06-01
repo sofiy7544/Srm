@@ -196,7 +196,7 @@ export default function ClientDetailPage() {
           {canMerge && (
             <Button variant="outline" size="sm" onClick={() => setMergeOpen(true)}>
               <GitMerge className="h-4 w-4" />
-              Об'єднати
+              Об&#39;єднати
             </Button>
           )}
           <Button variant="outline" size="sm" onClick={handleDelete}>

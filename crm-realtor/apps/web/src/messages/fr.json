@@ -1025,7 +1025,8 @@
     "emptyHint": "Tous les leads sont attribués.",
     "claimButton": "Prendre",
     "claimed": "Lead pris",
-    "claimError": "Impossible de prendre"
+    "claimError": "Impossible de prendre",
+    "qualifyCta": "Qualifier un contact"
   },
   "inbox": {
     "title": "Boîte unifiée",

@@ -133,6 +133,9 @@ export default function InboxPage() {
       setStaffList((u as UserBriefList[]).filter((u) => u.isActive && u.id !== me?.id));
       setSourcesList(s);
     }).catch(() => toast.error(tToast("loadError"))).finally(() => setLoading(false));
+    // Загрузка один раз при монтировании — внешние зависимости стабильны на
+    // время жизни экрана; добавление их в deps вызвало бы лишние перезагрузки.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /* ── Load timeline when contact selected ──────────────────────────────── */
@@ -237,10 +240,14 @@ export default function InboxPage() {
         await clients.update(selected.id, { notes: noteLines });
       }
 
+      // "pool" → assignedUserId: null (unclaimed-лид попадёт в /pool для assign).
+      // "self" → текущий пользователь. Иначе — выбранный сотрудник.
       const assignedUserId =
-        qualify.assignTo === "self"
-          ? me.id
-          : qualify.assignTo || me.id;
+        qualify.assignTo === "pool"
+          ? null
+          : qualify.assignTo === "self"
+            ? me.id
+            : qualify.assignTo || me.id;
 
       const lead = await leads.create({
         clientId: selected.id,
@@ -644,6 +651,16 @@ export default function InboxPage() {
                     <div className="space-y-1.5">
                       <label className="text-xs font-medium text-foreground">Призначити</label>
                       <div className="flex flex-col gap-1.5">
+                        <button
+                          onClick={() => updateQ("assignTo", "pool")}
+                          className={cn(
+                            "flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-all text-left",
+                            qualify.assignTo === "pool" ? "border-primary bg-primary/10 font-medium" : "border-border hover:bg-muted"
+                          )}
+                        >
+                          <UserPlus className="h-3.5 w-3.5 text-muted-foreground" />
+                          У пул (нерозподілений)
+                        </button>
                         <button
                           onClick={() => updateQ("assignTo", "self")}
                           className={cn(

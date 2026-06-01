@@ -91,8 +91,8 @@ export class MessagesService {
     if (!input.body.trim()) throw new BadRequestException('Пустое сообщение');
 
     const contact =
-      client.contacts.find((c: any) => c.channel === input.channel && c.isPrimary) ??
-      client.contacts.find((c: any) => c.channel === input.channel) ??
+      client.contacts.find((c) => c.channel === input.channel && c.isPrimary) ??
+      client.contacts.find((c) => c.channel === input.channel) ??
       null;
 
     let delivered = false;

@@ -487,7 +487,7 @@ export const leads = {
   create: (body: {
     clientId: string;
     sourceId?: string;
-    assignedUserId?: string;
+    assignedUserId?: string | null;
     dealIntent?: DealIntent;
     interestPropertyId?: string | null;
     interestNote?: string | null;

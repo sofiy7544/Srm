@@ -55,11 +55,17 @@ export default function PoolPage() {
 
   return (
     <div className="space-y-5 animate-slide-up">
-      <div>
-        <h1 className="heading-page">{t('title')}</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          {t('subtitle')}
-        </p>
+      <div className="flex items-end justify-between gap-2 flex-wrap">
+        <div>
+          <h1 className="heading-page">{t('title')}</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {t('subtitle')}
+          </p>
+        </div>
+        {/* Точка входа в квалификацию unclaimed-контактов (отдельно от пула). */}
+        <Button asChild variant="outline">
+          <Link href="/qualify">{t('qualifyCta')}</Link>
+        </Button>
       </div>
 
       {items.length === 0 ? (

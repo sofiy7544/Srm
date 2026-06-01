@@ -76,7 +76,12 @@ export class LeadsService {
         `У цього контакта вже є активний лід у стадії ${activeDup.stage}. ID: ${activeDup.id}`,
       );
     }
-    const assignedUserId = (input.assignedUserId ?? client.assignedUserId) ?? actor.userId;
+    // assignedUserId === null — явный запрос на unclaimed-лид (в /pool).
+    // undefined — дефолт: ответственный клиента, иначе создатель.
+    const assignedUserId =
+      input.assignedUserId === null
+        ? null
+        : (input.assignedUserId ?? client.assignedUserId ?? actor.userId);
     if (input.interestPropertyId && input.interestNote) {
       throw new BadRequestException(
         'Specify either interestPropertyId or interestNote, not both',

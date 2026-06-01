@@ -4,7 +4,9 @@ import { LeadStage, DealIntent } from '../enums';
 export const createLeadSchema = z.object({
   clientId: z.string().uuid(),
   sourceId: z.string().uuid().optional(),
-  assignedUserId: z.string().uuid().optional(),
+  // null = явно создать unclaimed-лид (попадёт в /pool для admin assign).
+  // undefined = дефолтное назначение (на ответственного клиента/создателя).
+  assignedUserId: z.string().uuid().nullable().optional(),
   stage: z.nativeEnum(LeadStage).default(LeadStage.NEW),
   dealIntent: z.nativeEnum(DealIntent).default(DealIntent.BUY),
   interestPropertyId: z.string().uuid().optional().nullable(),
