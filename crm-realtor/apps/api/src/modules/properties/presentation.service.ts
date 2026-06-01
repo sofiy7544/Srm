@@ -100,7 +100,7 @@ export class PresentationService {
       <div class="card" style="margin-top: 16px;">
         <h2>Галерея</h2>
         <div class="photos">
-          ${property.photos.slice(1).map((p: any) => `<img src="${escapeAttr(p.url)}" alt="" />`).join('')}
+          ${property.photos.slice(1).map((p) => `<img src="${escapeAttr(p.url)}" alt="" />`).join('')}
         </div>
       </div>` : ''}
 

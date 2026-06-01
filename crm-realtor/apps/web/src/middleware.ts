@@ -20,6 +20,7 @@ const PROTECTED_PREFIXES = [
   '/admin',
   '/team',
   '/pool',
+  '/qualify',
 ];
 
 export function middleware(req: NextRequest) {
@@ -58,5 +59,6 @@ export const config = {
     '/admin/:path*',
     '/team/:path*',
     '/pool/:path*',
+    '/qualify/:path*',
   ],
 };

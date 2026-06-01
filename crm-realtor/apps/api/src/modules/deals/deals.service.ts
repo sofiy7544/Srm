@@ -97,7 +97,7 @@ export class DealsService {
         },
         include: DEAL_INCLUDE,
       });
-    } catch (e: any) {
+    } catch (e: unknown) {
       if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
         throw new ConflictException('По этому лиду уже создана сделка');
       }
@@ -173,7 +173,7 @@ export class DealsService {
     await this.audit.update(actor.userId, 'Deal', id, {
       changedFields: Object.keys(input),
       newStatus: input.status ?? null,
-    } as any);
+    } as Prisma.InputJsonValue);
 
     return updated;
   }

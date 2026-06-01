@@ -243,7 +243,7 @@ export default function AutomationPage() {
             {/* Conditions — engine reads cond.sourceType, cond.district, cond.dealIntent */}
             <div className="rounded-lg border border-dashed border-border p-3 space-y-3">
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Умова спрацювання (необов'язково)
+                Умова спрацювання (необов&#39;язково)
               </p>
               <div className="grid sm:grid-cols-3 gap-3">
                 <div className="space-y-1">

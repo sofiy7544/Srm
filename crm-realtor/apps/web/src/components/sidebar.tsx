@@ -29,11 +29,12 @@ import { useAuthStore } from '@/lib/auth-store';
 type NavRole = 'all' | 'admin'; // 'admin' = ADMIN or MANAGER
 
 // Reduced from 9 → 6 items (Pipedrive / Attio benchmark).
-// Pool is reachable from /inbox as a tab.
+// "Вхідні" ведёт на /pool — пул нераспределённых лидов (основной экран новых
+// заявок). Квалификация unclaimed-контактов живёт отдельно на /qualify.
 // Team is reachable from /insights for admins.
 const NAV_ITEMS: { href: string; icon: typeof Home; key: string; role: NavRole }[] = [
   { href: '/today', icon: Home, key: 'today', role: 'all' },
-  { href: '/inbox', icon: Inbox, key: 'inbox', role: 'all' },
+  { href: '/pool', icon: Inbox, key: 'inbox', role: 'all' },
   { href: '/pipeline', icon: KanbanSquare, key: 'pipeline', role: 'all' },
   { href: '/contacts', icon: Users, key: 'contacts', role: 'all' },
   { href: '/inventory', icon: Building2, key: 'inventory', role: 'all' },

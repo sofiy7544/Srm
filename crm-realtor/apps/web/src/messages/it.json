@@ -1025,7 +1025,8 @@
     "emptyHint": "Tutti i lead sono assegnati.",
     "claimButton": "Prendi",
     "claimed": "Lead preso",
-    "claimError": "Impossibile prendere"
+    "claimError": "Impossibile prendere",
+    "qualifyCta": "Qualifica un contatto"
   },
   "inbox": {
     "title": "Posta unificata",

@@ -1230,7 +1230,8 @@
     "emptyHint": "All leads are assigned.",
     "claimButton": "Take it",
     "claimed": "Lead claimed",
-    "claimError": "Could not claim"
+    "claimError": "Could not claim",
+    "qualifyCta": "Qualify a contact"
   },
   "inbox": {
     "title": "Unified Inbox",
