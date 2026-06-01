@@ -86,7 +86,7 @@ export function DealCard({ deal, nextAction, overdue, dragging }: DealCardProps)
       {/* нижняя строка: агент + дата создания */}
       <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/50">
         <span className="inline-flex items-center gap-1 text-3xs text-muted-foreground min-w-0">
-          <Avatar name={deal.agent.fullName} size="xs" className="h-4 w-4 text-[8px] ring-1" />
+          <Avatar name={deal.agent.fullName} size="xs" className="h-4 w-4 text-[10px] ring-1" />
           <span className="truncate">{deal.agent.fullName.split(' ')[0]}</span>
         </span>
         <span className="text-3xs text-muted-foreground tabular-nums">

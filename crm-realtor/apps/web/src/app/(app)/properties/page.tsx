@@ -7,7 +7,7 @@ import { Plus, Search, Building2, MapPin, Maximize, BedDouble, User } from 'luci
 import { useAuthStore } from '@/lib/auth-store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Badge } from '@/components/ui/badge';
 import {
   Select,
@@ -197,12 +197,7 @@ export default function PropertiesPage() {
           ))}
         </div>
       ) : data && data.items.length === 0 ? (
-        <Card className="p-12 text-center">
-          <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-primary/15 to-violet-500/15 flex items-center justify-center mx-auto mb-3">
-            <Building2 className="h-5 w-5 text-primary" />
-          </div>
-          <p className="font-medium">{t('noResults')}</p>
-        </Card>
+        <EmptyState icon={Building2} title={t('noResults')} />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {data?.items.map((p) => {

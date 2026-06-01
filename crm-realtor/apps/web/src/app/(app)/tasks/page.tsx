@@ -618,7 +618,7 @@ function TaskRowView({
             <>
               <span>·</span>
               <span className="flex items-center gap-1">
-                <Avatar name={task.user.fullName} size="xs" className="h-4 w-4 text-[8px] ring-1" />
+                <Avatar name={task.user.fullName} size="xs" className="h-4 w-4 text-[10px] ring-1" />
                 {task.user.fullName.split(' ')[0]}
               </span>
             </>
