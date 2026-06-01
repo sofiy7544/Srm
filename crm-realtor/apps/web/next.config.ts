@@ -31,6 +31,18 @@ const nextConfig: NextConfig = {
       { source: '/dashboard/:path*', destination: '/today/:path*', permanent: false },
     ];
   },
+  // Same-origin proxy: браузер обращается только к домену фронта (/api/*),
+  // Next проксирует на бэкенд. Делает cookie аутентификации first-party —
+  // иначе мобильный Safari (ITP) режет cross-site cookie и сессия не держится.
+  // Цель задаётся server-side переменной API_PROXY_TARGET (URL backend без /).
+  async rewrites() {
+    const target = (process.env.API_PROXY_TARGET ?? process.env.NEXT_PUBLIC_API_URL ?? '')
+      .trim()
+      .replace(/^[<"'\s]+|[>"'\s]+$/g, '')
+      .replace(/\/+$/, '');
+    if (!target) return [];
+    return [{ source: '/api/:path*', destination: `${target}/api/:path*` }];
+  },
 };
 
 export default withNextIntl(nextConfig);
