@@ -4,11 +4,11 @@
 // once the team grows past one developer. Keep `import { ... } from '@/lib/api'`
 // working as the public surface — extract into a barrel index.ts.
 
-// Санитизация: убираем случайные угловые скобки (часто прилетают при копировании
-// вида <https://...>), кавычки, пробелы и хвостовой слэш — иначе fetch получает
-// невалидный URL и запрос молча не уходит.
-const RAW_API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
-const API_BASE = RAW_API_BASE.trim().replace(/^[<"'\s]+|[>"'\s]+$/g, '').replace(/\/+$/, '');
+// Same-origin ВСЕГДА: клиент ходит на относительный /api, который Next rewrites
+// проксирует на бэкенд (см. next.config.ts, target = API_PROXY_TARGET или
+// NEXT_PUBLIC_API_URL). first-party cookie → работает в т.ч. в мобильном Safari
+// (ITP режет cross-site cookie). Прямые cross-site запросы из браузера убраны.
+const API_BASE = '';
 
 export type UserBrief = { id: string; email: string; role: string };
 
