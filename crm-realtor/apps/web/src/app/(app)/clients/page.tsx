@@ -7,7 +7,7 @@ import { Plus, Search, Phone, Mail, ChevronRight, Archive, Ban } from 'lucide-re
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Badge } from '@/components/ui/badge';
 import { Avatar } from '@/components/ui/avatar';
 import { SourceIcon } from '@/components/source-badge';
@@ -107,12 +107,7 @@ export default function ClientsPage() {
           ))}
         </div>
       ) : data && data.items.length === 0 ? (
-        <Card className="p-12 text-center">
-          <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-primary/15 to-violet-500/15 flex items-center justify-center mx-auto mb-3">
-            <Search className="h-5 w-5 text-primary" />
-          </div>
-          <p className="font-medium">{search ? t('noResults') : t('empty')}</p>
-        </Card>
+        <EmptyState icon={Search} title={search ? t('noResults') : t('empty')} />
       ) : (
         <div className="grid gap-2">
           {data?.items.map((c) => (

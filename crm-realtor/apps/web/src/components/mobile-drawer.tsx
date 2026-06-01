@@ -85,7 +85,7 @@ export function MobileDrawer() {
                   href={href}
                   className={cn(
                     // min-h-touch: 44px WCAG touch target
-                    'flex items-center gap-3 rounded-lg px-3 min-h-touch text-[15px] font-medium transition-all tracking-tightish active:scale-[0.99]',
+                    'flex items-center gap-3 rounded-lg px-3 min-h-touch text-sm font-medium transition-all tracking-tightish active:scale-[0.99]',
                     active
                       ? 'bg-primary text-primary-foreground shadow-glow'
                       : 'text-foreground/80 hover:bg-muted hover:text-foreground',
