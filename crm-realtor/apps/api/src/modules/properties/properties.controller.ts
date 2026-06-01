@@ -49,6 +49,18 @@ export class PropertiesController {
     return this.properties.getById(id);
   }
 
+  /** История изменения цены объекта. */
+  @Get(':id/price-history')
+  priceHistory(@Param('id', ParseUUIDPipe) id: string) {
+    return this.properties.priceHistory(id);
+  }
+
+  /** Матчинг: подходящие клиенты-покупатели под этот объект. */
+  @Get(':id/matches')
+  matchForProperty(@Param('id', ParseUUIDPipe) id: string) {
+    return this.properties.matchForProperty(id);
+  }
+
   @Post()
   create(
     @CurrentUser() user: CurrentUserPayload,
@@ -59,10 +71,11 @@ export class PropertiesController {
 
   @Patch(':id')
   update(
+    @CurrentUser() user: CurrentUserPayload,
     @Param('id', ParseUUIDPipe) id: string,
     @Body(new ZodValidationPipe(updatePropertySchema)) body: UpdatePropertyInput,
   ) {
-    return this.properties.update(id, body);
+    return this.properties.update(id, body, user.userId);
   }
 
   @Delete(':id')

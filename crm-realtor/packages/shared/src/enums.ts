@@ -66,6 +66,13 @@ export const DealIntent = {
 } as const;
 export type DealIntent = (typeof DealIntent)[keyof typeof DealIntent];
 
+export const ClientType = {
+  BUYER: 'BUYER',
+  SELLER: 'SELLER',
+  BOTH: 'BOTH',
+} as const;
+export type ClientType = (typeof ClientType)[keyof typeof ClientType];
+
 export const PropertyStatus = {
   AVAILABLE: 'AVAILABLE',
   IN_SHOWING: 'IN_SHOWING',

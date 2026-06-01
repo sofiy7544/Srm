@@ -5,7 +5,7 @@ import {
   NotFoundException,
   ForbiddenException,
 } from '@nestjs/common';
-import { ActivityDirection, ActivityType, Prisma, UserRole } from '@prisma/client';
+import { ActivityDirection, ActivityType, Prisma, PropertyStatus, UserRole } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import type { CreateClientInput, UpdateClientInput, ClientFilter } from '@crm/shared';
 import {
@@ -180,6 +180,41 @@ export class ClientsService {
     return client;
   }
 
+  /**
+   * МАТЧИНГ: подходящие объекты под предпочтения клиента (бюджет/район/комнаты/
+   * тип/intent → доступные объекты). Ядро риелторского подбора.
+   */
+  async matchProperties(actor: CurrentUserPayload, id: string) {
+    const client = await this.prisma.client.findUnique({
+      where: { id },
+      select: { assignedUserId: true, preferences: true },
+    });
+    if (!client) throw new NotFoundException('Client not found');
+    this.assertCanAccess(actor, client.assignedUserId);
+
+    const prefs = client.preferences;
+    if (!prefs) return { matches: [], count: 0, reason: 'no_preferences' as const };
+
+    const where: Prisma.PropertyWhereInput = { status: PropertyStatus.AVAILABLE };
+    if (prefs.propertyType) where.type = prefs.propertyType;
+    if (prefs.dealIntent) where.dealIntent = prefs.dealIntent;
+    if (prefs.priceMin) where.price = { gte: prefs.priceMin };
+    if (prefs.priceMax) where.price = { ...(where.price as object), lte: prefs.priceMax };
+    if (prefs.roomsMin) where.rooms = { gte: prefs.roomsMin };
+    if (prefs.roomsMax) where.rooms = { ...(where.rooms as object), lte: prefs.roomsMax };
+    if (prefs.areaMin) where.area = { gte: prefs.areaMin };
+    if (prefs.areaMax) where.area = { ...(where.area as object), lte: prefs.areaMax };
+    if (prefs.districts.length > 0) where.district = { in: prefs.districts };
+
+    const matches = await this.prisma.property.findMany({
+      where,
+      include: { photos: { orderBy: { order: 'asc' }, take: 1 } },
+      orderBy: { price: 'asc' },
+      take: 50,
+    });
+    return { matches, count: matches.length };
+  }
+
   async create(actor: CurrentUserPayload, input: CreateClientInput) {
     const exists = await this.prisma.client.findUnique({
       where: { primaryPhone: input.primaryPhone },
@@ -200,6 +235,7 @@ export class ClientsService {
     return this.prisma.client.create({
       data: {
         fullName: input.fullName,
+        type: input.type ?? undefined,
         primaryPhone: input.primaryPhone,
         email: input.email ?? null,
         avatarUrl: input.avatarUrl ?? null,
@@ -262,6 +298,7 @@ export class ClientsService {
       where: { id },
       data: {
         fullName: input.fullName,
+        type: input.type ?? undefined,
         primaryPhone: input.primaryPhone,
         email: input.email,
         avatarUrl: input.avatarUrl,

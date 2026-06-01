@@ -14,6 +14,8 @@ export const createPropertySchema = z.object({
   currency: z.string().length(3).default('EUR'),
   status: z.nativeEnum(PropertyStatus).default(PropertyStatus.AVAILABLE),
   ownerUserId: z.string().uuid().optional(),
+  // Собственник-продавец (клиент агентства), чей объект выставлен.
+  sellerClientId: z.string().uuid().optional().nullable(),
   description: z.string().max(10000).optional(),
   features: z.record(z.string(), z.unknown()).optional(),
 });

@@ -183,6 +183,7 @@ model User {
   emailVerificationTokens EmailVerificationToken[]
   passwordResetTokens     PasswordResetToken[]
   sentInvitations         TeamInvitation[]         @relation("InvitedBy")
+  priceChanges            PropertyPriceHistory[]   @relation("PriceHistoryAuthor")
 
   @@index([managerId])
   @@map("users")
@@ -303,9 +304,10 @@ model Source {
 // ============ Core: Clients ============
 
 model Client {
-  id               String   @id @default(uuid()) @db.Uuid
-  fullName         String   @map("full_name")
-  primaryPhone     String   @unique @map("primary_phone")
+  id               String     @id @default(uuid()) @db.Uuid
+  fullName         String     @map("full_name")
+  type             ClientType @default(BUYER)
+  primaryPhone     String     @unique @map("primary_phone")
   email            String?
   avatarUrl        String?  @map("avatar_url")
   sourceId         String?  @map("source_id") @db.Uuid
@@ -329,11 +331,13 @@ model Client {
   tasks           Task[]
   showings        Showing[]
   documents       Document[]
+  listedProperties Property[]        @relation("PropertySeller")
 
   @@index([assignedUserId, createdAt])
   @@index([sourceId])
   @@index([isArchived])
   @@index([isBlacklisted])
+  @@index([type])
   @@map("clients")
 }
 
@@ -355,6 +359,15 @@ model ClientContact {
 enum DealIntent {
   BUY
   RENT
+}
+
+// Роль клиента в сделках с недвижимостью. BUYER — ищет объект; SELLER —
+// собственник, выставивший объект; BOTH — и то и другое (частый кейс：
+// продаёт своё, покупает новое).
+enum ClientType {
+  BUYER
+  SELLER
+  BOTH
 }
 
 model ClientPreferences {
@@ -392,21 +405,27 @@ model Property {
   currency     String         @default("UAH") @db.VarChar(3)
   status       PropertyStatus @default(AVAILABLE)
   ownerUserId  String?        @map("owner_user_id") @db.Uuid
+  // Собственник-продавец (клиент агентства), чей объект выставлен. Отдельно от
+  // ownerUserId (это ответственный риелтор). Для sales-CRM хранит сторону-продавца.
+  sellerClientId String?      @map("seller_client_id") @db.Uuid
   description  String?
   features     Json?
   createdAt    DateTime       @default(now()) @map("created_at")
   updatedAt    DateTime       @updatedAt @map("updated_at")
 
-  owner    User?           @relation("PropertyOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
-  photos   PropertyPhoto[]
-  leads    Lead[]
-  deals    Deal[]
-  showings Showing[]
-  documents Document[]
+  owner        User?                  @relation("PropertyOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
+  sellerClient Client?                @relation("PropertySeller", fields: [sellerClientId], references: [id], onDelete: SetNull)
+  photos       PropertyPhoto[]
+  priceHistory PropertyPriceHistory[]
+  leads        Lead[]
+  deals        Deal[]
+  showings     Showing[]
+  documents    Document[]
 
   @@index([status, district, price])
   @@index([type])
   @@index([dealIntent, status])
+  @@index([sellerClientId])
   @@map("properties")
 }
 
@@ -428,6 +447,23 @@ model PropertyPhoto {
 enum PropertyMediaKind {
   PHOTO
   VIDEO
+}
+
+// История изменения цены объекта. Пишется при каждом изменении Property.price.
+// Источник правды для аналитики «как менялась цена» и доверия к данным.
+model PropertyPriceHistory {
+  id          String   @id @default(uuid()) @db.Uuid
+  propertyId  String   @map("property_id") @db.Uuid
+  price       Decimal  @db.Decimal(14, 2)
+  currency    String   @default("UAH") @db.VarChar(3)
+  changedById String?  @map("changed_by_id") @db.Uuid
+  changedAt   DateTime @default(now()) @map("changed_at")
+
+  property  Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  changedBy User?    @relation("PriceHistoryAuthor", fields: [changedById], references: [id], onDelete: SetNull)
+
+  @@index([propertyId, changedAt(sort: Desc)])
+  @@map("property_price_history")
 }
 
 // ============ Core: Leads ============

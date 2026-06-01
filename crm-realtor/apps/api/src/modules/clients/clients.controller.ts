@@ -75,6 +75,15 @@ export class ClientsController {
     return this.clients.getById(user, id);
   }
 
+  /** Матчинг: подходящие объекты под предпочтения клиента. */
+  @Get(':id/matches')
+  matches(
+    @CurrentUser() user: CurrentUserPayload,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.clients.matchProperties(user, id);
+  }
+
   @Post()
   create(
     @CurrentUser() user: CurrentUserPayload,
