@@ -40,6 +40,20 @@ const ALLOWED_AUDIO = new Set([
   'audio/x-wav',
 ]);
 
+// Fallback по расширению: Safari/iOS часто шлёт HEIC/MOV с пустым или
+// application/octet-stream MIME. Возвращаем нормальный MIME по расширению.
+const EXT_MIME: Record<string, string> = {
+  heic: 'image/heic', heif: 'image/heif',
+  jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png',
+  webp: 'image/webp', gif: 'image/gif',
+  mp4: 'video/mp4', webm: 'video/webm', mov: 'video/quicktime',
+};
+function resolveMime(mime: string, originalName: string): string {
+  if (mime && mime !== 'application/octet-stream') return mime;
+  const ext = originalName.includes('.') ? originalName.split('.').pop()?.toLowerCase() : '';
+  return (ext && EXT_MIME[ext]) || mime || 'application/octet-stream';
+}
+
 @Controller('uploads')
 @UseGuards(JwtAuthGuard)
 export class UploadsController {
@@ -51,12 +65,13 @@ export class UploadsController {
   async uploadImage(@UploadedFile() file: Express.Multer.File) {
     if (!file) throw new BadRequestException('Файл не получен. Попробуйте ещё раз.');
     if (file.size === 0) throw new BadRequestException('Файл пустой или повреждён.');
-    if (!ALLOWED_IMAGE.has(file.mimetype)) {
+    const mime = resolveMime(file.mimetype, file.originalname);
+    if (!ALLOWED_IMAGE.has(mime)) {
       throw new BadRequestException('Формат файла не поддерживается. Используйте JPG, PNG, WEBP или HEIC.');
     }
     const key = this.storage.buildKey('properties', file.originalname);
-    const result = await this.storage.uploadBuffer(key, file.buffer, file.mimetype, 'public');
-    return { key: result.key, url: result.url, size: file.size, contentType: file.mimetype };
+    const result = await this.storage.uploadBuffer(key, file.buffer, mime, 'public');
+    return { key: result.key, url: result.url, size: file.size, contentType: mime };
   }
 
   /**
@@ -68,7 +83,9 @@ export class UploadsController {
   async uploadMedia(@UploadedFile() file: Express.Multer.File) {
     if (!file) throw new BadRequestException('Файл не получен. Попробуйте ещё раз.');
     if (file.size === 0) throw new BadRequestException('Файл пустой или повреждён.');
-    const mime = file.mimetype;
+    // Safari/iOS иногда шлёт HEIC/MOV с пустым или octet-stream MIME. В этом
+    // случае определяем тип по расширению файла.
+    const mime = resolveMime(file.mimetype, file.originalname);
 
     let kind: 'PHOTO' | 'VIDEO';
     if (ALLOWED_IMAGE.has(mime)) {

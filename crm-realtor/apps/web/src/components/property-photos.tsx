@@ -6,8 +6,10 @@ import { Upload, Trash2, Loader2, Star, Video, ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { properties, uploads, type PropertyPhoto } from '@/lib/api';
 
-const IMAGE_ACCEPT = 'image/jpeg,image/png,image/webp,image/gif';
-const VIDEO_ACCEPT = 'video/mp4,video/webm,video/quicktime';
+// HEIC/HEIF — формат фото с камеры iPhone. Без него Safari не даёт выбрать
+// такие снимки. Бэкенд /media их принимает.
+const IMAGE_ACCEPT = 'image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,.heic,.heif';
+const VIDEO_ACCEPT = 'video/mp4,video/webm,video/quicktime,.mov';
 const MEDIA_ACCEPT = `${IMAGE_ACCEPT},${VIDEO_ACCEPT}`;
 
 export function PropertyPhotos({
