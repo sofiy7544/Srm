@@ -73,6 +73,25 @@ export const ClientType = {
 } as const;
 export type ClientType = (typeof ClientType)[keyof typeof ClientType];
 
+export const LeadPurpose = {
+  SPECIFIC_OBJECT: 'SPECIFIC_OBJECT',
+  SELECTION: 'SELECTION',
+  SALE: 'SALE',
+  RENT_OUT: 'RENT_OUT',
+  CONSULTATION: 'CONSULTATION',
+  BROWSING: 'BROWSING',
+} as const;
+export type LeadPurpose = (typeof LeadPurpose)[keyof typeof LeadPurpose];
+
+export const LeadUrgency = {
+  URGENT: 'URGENT',
+  THIS_WEEK: 'THIS_WEEK',
+  THIS_MONTH: 'THIS_MONTH',
+  THREE_MONTHS: 'THREE_MONTHS',
+  JUST_LOOKING: 'JUST_LOOKING',
+} as const;
+export type LeadUrgency = (typeof LeadUrgency)[keyof typeof LeadUrgency];
+
 export const PropertyStatus = {
   AVAILABLE: 'AVAILABLE',
   IN_SHOWING: 'IN_SHOWING',

@@ -109,6 +109,12 @@ export class LeadsService {
         interestNote: input.interestNote?.trim() || null,
         interestPhotoUrl: input.interestPhotoUrl ?? null,
         priority: input.priority ?? 'warm',
+        purpose: input.purpose ?? null,
+        urgency: input.urgency ?? null,
+        budgetMin: input.budgetMin ?? null,
+        budgetMax: input.budgetMax ?? null,
+        budgetCurrency: input.budgetCurrency ?? null,
+        nextActionAt: input.nextActionAt ? new Date(input.nextActionAt) : null,
       },
       include: LEAD_INCLUDE,
     });
@@ -167,6 +173,17 @@ export class LeadsService {
         interestPropertyId,
         interestNote,
         interestPhotoUrl: input.interestPhotoUrl === undefined ? undefined : input.interestPhotoUrl,
+        purpose: input.purpose === undefined ? undefined : input.purpose,
+        urgency: input.urgency === undefined ? undefined : input.urgency,
+        budgetMin: input.budgetMin === undefined ? undefined : input.budgetMin,
+        budgetMax: input.budgetMax === undefined ? undefined : input.budgetMax,
+        budgetCurrency: input.budgetCurrency === undefined ? undefined : input.budgetCurrency,
+        nextActionAt:
+          input.nextActionAt === undefined
+            ? undefined
+            : input.nextActionAt
+              ? new Date(input.nextActionAt)
+              : null,
       },
       include: LEAD_INCLUDE,
     });

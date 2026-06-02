@@ -370,6 +370,26 @@ enum ClientType {
   BOTH
 }
 
+// Цель обращения лида — реальный процесс агентства (большинство новых лидов
+// НЕ знают конкретный объект). Опционально для обратной совместимости.
+enum LeadPurpose {
+  SPECIFIC_OBJECT // конкретный объект (адрес/из CRM/ссылка)
+  SELECTION       // подбор объекта по критериям
+  SALE            // продажа своего объекта
+  RENT_OUT        // сдать в аренду
+  CONSULTATION    // консультация
+  BROWSING        // пока изучает рынок
+}
+
+// Срочность потребности — для продаж важнее адреса объекта.
+enum LeadUrgency {
+  URGENT        // срочно
+  THIS_WEEK     // в течение недели
+  THIS_MONTH    // в течение месяца
+  THREE_MONTHS  // в течение 3 месяцев
+  JUST_LOOKING  // просто интересуется
+}
+
 model ClientPreferences {
   clientId     String        @id @map("client_id") @db.Uuid
   propertyType PropertyType?
@@ -478,6 +498,14 @@ model Lead {
   interestPropertyId  String?    @map("interest_property_id") @db.Uuid
   interestNote        String?    @map("interest_note")
   interestPhotoUrl    String?    @map("interest_photo_url")
+  // Цель обращения + срочность + бюджет на лиде (реальный процесс агентства).
+  // Все опциональны → старые лиды остаются валидными.
+  purpose             LeadPurpose? @map("purpose")
+  urgency             LeadUrgency? @map("urgency")
+  budgetMin           Decimal?   @map("budget_min") @db.Decimal(14, 2)
+  budgetMax           Decimal?   @map("budget_max") @db.Decimal(14, 2)
+  budgetCurrency      String?    @map("budget_currency") @db.VarChar(3)
+  nextActionAt        DateTime?  @map("next_action_at")
   lostReason          String?    @map("lost_reason")
   priority            String?    @default("warm") @map("priority")
   stageChangedAt      DateTime   @default(now()) @map("stage_changed_at")
@@ -499,6 +527,7 @@ model Lead {
   @@index([clientId])
   @@index([dealIntent, stage])
   @@index([lastActivityAt])
+  @@index([assignedUserId, nextActionAt])
   @@map("leads")
 }
 

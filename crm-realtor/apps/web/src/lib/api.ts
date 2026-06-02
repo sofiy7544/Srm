@@ -507,6 +507,12 @@ export const leads = {
     interestNote?: string | null;
     interestPhotoUrl?: string | null;
     priority?: 'hot' | 'warm' | 'cold';
+    purpose?: string | null;
+    urgency?: string | null;
+    budgetMin?: number | null;
+    budgetMax?: number | null;
+    budgetCurrency?: string | null;
+    nextActionAt?: string | null;
   }) => api<LeadDetailed>('/api/leads', { method: 'POST', body: JSON.stringify(body) }),
   update: (id: string, body: {
     assignedUserId?: string | null;

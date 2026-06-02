@@ -1,5 +1,16 @@
 import { z } from 'zod';
-import { LeadStage, DealIntent } from '../enums';
+import { LeadStage, DealIntent, LeadPurpose, LeadUrgency } from '../enums';
+
+// Поля «цель обращения / срочность / бюджет / следующий контакт» — общие для
+// create и update. Все опциональны (обратная совместимость со старыми лидами).
+const leadGoalFields = {
+  purpose: z.nativeEnum(LeadPurpose).nullable().optional(),
+  urgency: z.nativeEnum(LeadUrgency).nullable().optional(),
+  budgetMin: z.number().nonnegative().nullable().optional(),
+  budgetMax: z.number().nonnegative().nullable().optional(),
+  budgetCurrency: z.string().length(3).nullable().optional(),
+  nextActionAt: z.string().datetime().nullable().optional(),
+};
 
 export const createLeadSchema = z.object({
   clientId: z.string().uuid(),
@@ -13,6 +24,7 @@ export const createLeadSchema = z.object({
   interestNote: z.string().max(2000).optional().nullable(),
   interestPhotoUrl: z.string().url().max(2000).optional().nullable(),
   priority: z.enum(['hot', 'warm', 'cold']).optional(),
+  ...leadGoalFields,
 });
 export type CreateLeadInput = z.infer<typeof createLeadSchema>;
 
@@ -24,6 +36,7 @@ export const updateLeadSchema = z.object({
   sourceId: z.string().uuid().nullable().optional(),
   dealIntent: z.nativeEnum(DealIntent).optional(),
   priority: z.enum(['hot', 'warm', 'cold']).optional(),
+  ...leadGoalFields,
 });
 export type UpdateLeadInput = z.infer<typeof updateLeadSchema>;
 
