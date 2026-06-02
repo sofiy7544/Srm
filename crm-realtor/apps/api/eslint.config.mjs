@@ -42,6 +42,25 @@ export default [
     },
   },
   {
+    // Jest-глобалы для unit-тестов. project:null — spec исключены из
+    // tsconfig (не идут в сборку), поэтому отключаем type-aware парсинг.
+    files: ['src/**/*.spec.ts'],
+    languageOptions: {
+      parser: tsparser,
+      parserOptions: { project: null },
+      globals: {
+        describe: 'readonly',
+        it: 'readonly',
+        expect: 'readonly',
+        jest: 'readonly',
+        beforeEach: 'readonly',
+        afterEach: 'readonly',
+        beforeAll: 'readonly',
+        afterAll: 'readonly',
+      },
+    },
+  },
+  {
     ignores: ['dist/**', 'node_modules/**', 'prisma/seed.ts', 'prisma/seed.js', 'eslint.config.mjs'],
   },
 ];
