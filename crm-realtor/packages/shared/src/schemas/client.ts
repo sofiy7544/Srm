@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { ContactChannel, PropertyType, ClientType } from '../enums';
+import { mediaUrlSchema } from './media';
 
 export const phoneSchema = z
   .string()
@@ -31,7 +32,7 @@ export const createClientSchema = z.object({
   type: z.nativeEnum(ClientType).default(ClientType.BUYER),
   primaryPhone: phoneSchema,
   email: z.string().email().optional().nullable(),
-  avatarUrl: z.string().url().optional().nullable(),
+  avatarUrl: mediaUrlSchema.optional().nullable(),
   sourceId: z.string().uuid().optional(),
   assignedUserId: z.string().uuid().optional(),
   notes: z.string().max(5000).optional(),
