@@ -13,7 +13,15 @@ import { StorageService } from './storage.service';
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024; //  10 MB images
 const MAX_VIDEO_BYTES = 80 * 1024 * 1024; //  80 MB videos
 const MAX_AUDIO_BYTES = 25 * 1024 * 1024; //  25 MB voice notes (≈ 25 минут MP4-AAC)
-const ALLOWED_IMAGE = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+// HEIC/HEIF — формат фото с камеры iPhone (Safari часто отправляет его).
+const ALLOWED_IMAGE = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+  'image/heic',
+  'image/heif',
+]);
 const ALLOWED_VIDEO = new Set(['video/mp4', 'video/webm', 'video/quicktime']);
 // Audio MIME-типы — браузеры по-разному именуют:
 //   - Chrome/Firefox MediaRecorder → audio/webm
@@ -41,9 +49,10 @@ export class UploadsController {
   @Post('image')
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: MAX_IMAGE_BYTES } }))
   async uploadImage(@UploadedFile() file: Express.Multer.File) {
-    if (!file) throw new BadRequestException('File missing');
+    if (!file) throw new BadRequestException('Файл не получен. Попробуйте ещё раз.');
+    if (file.size === 0) throw new BadRequestException('Файл пустой или повреждён.');
     if (!ALLOWED_IMAGE.has(file.mimetype)) {
-      throw new BadRequestException(`Unsupported file type: ${file.mimetype}`);
+      throw new BadRequestException('Формат файла не поддерживается. Используйте JPG, PNG, WEBP или HEIC.');
     }
     const key = this.storage.buildKey('properties', file.originalname);
     const result = await this.storage.uploadBuffer(key, file.buffer, file.mimetype, 'public');
@@ -57,19 +66,20 @@ export class UploadsController {
   @Post('media')
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: MAX_VIDEO_BYTES } }))
   async uploadMedia(@UploadedFile() file: Express.Multer.File) {
-    if (!file) throw new BadRequestException('File missing');
+    if (!file) throw new BadRequestException('Файл не получен. Попробуйте ещё раз.');
+    if (file.size === 0) throw new BadRequestException('Файл пустой или повреждён.');
     const mime = file.mimetype;
 
     let kind: 'PHOTO' | 'VIDEO';
     if (ALLOWED_IMAGE.has(mime)) {
       if (file.size > MAX_IMAGE_BYTES) {
-        throw new BadRequestException(`Image too large (max ${MAX_IMAGE_BYTES / 1024 / 1024} MB)`);
+        throw new BadRequestException('Размер изображения превышает 10 МБ.');
       }
       kind = 'PHOTO';
     } else if (ALLOWED_VIDEO.has(mime)) {
       kind = 'VIDEO';
     } else {
-      throw new BadRequestException(`Unsupported file type: ${mime}`);
+      throw new BadRequestException('Формат файла не поддерживается. Фото: JPG, PNG, WEBP, HEIC. Видео: MP4, MOV, WEBM.');
     }
 
     const folder = kind === 'VIDEO' ? 'properties/videos' : 'properties';
