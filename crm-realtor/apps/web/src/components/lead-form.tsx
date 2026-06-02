@@ -44,6 +44,30 @@ import {
 import { Flame, Star, Snowflake } from 'lucide-react';
 import type { ClientDetailed, PropertyDetailed, LeadDetailed } from '@/lib/api';
 
+type LeadPurpose =
+  | 'SPECIFIC_OBJECT' | 'SELECTION' | 'SALE' | 'RENT_OUT' | 'CONSULTATION' | 'BROWSING';
+type LeadUrgency =
+  | 'URGENT' | 'THIS_WEEK' | 'THIS_MONTH' | 'THREE_MONTHS' | 'JUST_LOOKING';
+
+// Цели обращения с подписями (реальный процесс агентства). emoji — лёгкий
+// визуальный якорь, без зависимости от icon-набора.
+const PURPOSES: { value: LeadPurpose; label: string; emoji: string }[] = [
+  { value: 'SPECIFIC_OBJECT', label: 'Конкретный объект', emoji: '🏢' },
+  { value: 'SELECTION', label: 'Подбор объекта', emoji: '🔎' },
+  { value: 'SALE', label: 'Продажа объекта', emoji: '💰' },
+  { value: 'RENT_OUT', label: 'Сдать в аренду', emoji: '🔑' },
+  { value: 'CONSULTATION', label: 'Консультация', emoji: '💬' },
+  { value: 'BROWSING', label: 'Пока изучает рынок', emoji: '👀' },
+];
+
+const URGENCIES: { value: LeadUrgency; label: string }[] = [
+  { value: 'URGENT', label: 'Срочно' },
+  { value: 'THIS_WEEK', label: 'В течение недели' },
+  { value: 'THIS_MONTH', label: 'В течение месяца' },
+  { value: 'THREE_MONTHS', label: 'В течение 3 месяцев' },
+  { value: 'JUST_LOOKING', label: 'Просто интересуется' },
+];
+
 export interface LeadFormProps {
   /** Prefill the client picker (used by "create lead from contact" CTAs). */
   defaultClientId?: string;
@@ -95,6 +119,13 @@ export function LeadForm({
   const [quickClientOpen, setQuickClientOpen] = useState(false);
   const [dealIntent, setDealIntent] = useState<'BUY' | 'RENT'>('BUY');
   const [priority, setPriority] = useState<'hot' | 'warm' | 'cold'>('warm');
+  // P0: цель обращения / срочность / бюджет / следующий контакт.
+  const [purpose, setPurpose] = useState<LeadPurpose | ''>('');
+  const [urgency, setUrgency] = useState<LeadUrgency | ''>('');
+  const [budgetMin, setBudgetMin] = useState('');
+  const [budgetMax, setBudgetMax] = useState('');
+  const [budgetCurrency, setBudgetCurrency] = useState('EUR');
+  const [nextActionAt, setNextActionAt] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dupLead, setDupLead] = useState<LeadDetailed | null>(null);
@@ -131,13 +162,21 @@ export function LeadForm({
     setSaving(true);
     setError(null);
     try {
+      // Объект-поля передаём только когда цель — «Конкретный объект».
+      const isSpecific = purpose === 'SPECIFIC_OBJECT' || purpose === '';
       const lead = await leads.create({
         clientId,
         dealIntent,
-        interestPropertyId: interestMode === 'crm' ? (interestPropertyId || null) : null,
-        interestNote:       interestMode === 'note' ? (interestNote.trim() || null) : null,
-        interestPhotoUrl:   interestMode === 'note' ? (interestPhotoUrl || null) : null,
+        interestPropertyId: isSpecific && interestMode === 'crm' ? (interestPropertyId || null) : null,
+        interestNote:       isSpecific && interestMode === 'note' ? (interestNote.trim() || null) : null,
+        interestPhotoUrl:   isSpecific && interestMode === 'note' ? (interestPhotoUrl || null) : null,
         priority,
+        purpose: purpose || null,
+        urgency: urgency || null,
+        budgetMin: budgetMin ? Number(budgetMin) : null,
+        budgetMax: budgetMax ? Number(budgetMax) : null,
+        budgetCurrency: budgetMin || budgetMax ? budgetCurrency : null,
+        nextActionAt: nextActionAt ? new Date(nextActionAt).toISOString() : null,
       });
       const handled = onSuccess?.(lead);
       if (handled !== true) {
@@ -231,6 +270,93 @@ export function LeadForm({
         </div>
       )}
 
+      {/* P0: Цель обращения — ведущий выбор. Сетка адаптивна (1 кол. на мобиле). */}
+      <div className="space-y-2">
+        <Label>Цель обращения</Label>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {PURPOSES.map((p) => (
+            <button
+              key={p.value}
+              type="button"
+              onClick={() => setPurpose((cur) => (cur === p.value ? '' : p.value))}
+              className={cn(
+                'flex items-center gap-2 px-3 py-2.5 rounded-lg border text-sm text-left transition-all min-h-touch',
+                purpose === p.value
+                  ? 'border-primary bg-primary/10 font-medium'
+                  : 'border-border hover:bg-muted',
+              )}
+            >
+              <span aria-hidden>{p.emoji}</span>
+              <span className="truncate">{p.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Срочность — для продаж важнее адреса. */}
+      <div className="space-y-2">
+        <Label>Срочность</Label>
+        <div className="flex flex-wrap gap-1.5">
+          {URGENCIES.map((u) => (
+            <button
+              key={u.value}
+              type="button"
+              onClick={() => setUrgency((cur) => (cur === u.value ? '' : u.value))}
+              className={cn(
+                'px-3 py-1.5 rounded-full border text-xs font-medium transition-all',
+                urgency === u.value
+                  ? 'border-primary bg-primary/10'
+                  : 'border-border hover:bg-muted text-muted-foreground',
+              )}
+            >
+              {u.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Бюджет от/до + валюта. */}
+      <div className="space-y-2">
+        <Label>Бюджет</Label>
+        <div className="flex gap-2 items-center flex-wrap">
+          <Input
+            type="number"
+            inputMode="numeric"
+            placeholder="От"
+            value={budgetMin}
+            onChange={(e) => setBudgetMin(e.target.value)}
+            className="flex-1 min-w-[100px]"
+          />
+          <span className="text-muted-foreground">—</span>
+          <Input
+            type="number"
+            inputMode="numeric"
+            placeholder="До"
+            value={budgetMax}
+            onChange={(e) => setBudgetMax(e.target.value)}
+            className="flex-1 min-w-[100px]"
+          />
+          <Select value={budgetCurrency} onValueChange={setBudgetCurrency}>
+            <SelectTrigger className="w-[88px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {['EUR', 'USD', 'UAH', 'PLN'].map((c) => (
+                <SelectItem key={c} value={c}>{c}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Следующий контакт — попадёт в «Сегодня»/календарь. */}
+      <div className="space-y-2">
+        <Label>Следующий контакт</Label>
+        <Input
+          type="datetime-local"
+          value={nextActionAt}
+          onChange={(e) => setNextActionAt(e.target.value)}
+        />
+      </div>
+
       <div className="space-y-2">
         <Label>{tForm('dealIntent')} *</Label>
         <div className="inline-flex rounded-lg border border-border overflow-hidden">
@@ -255,6 +381,9 @@ export function LeadForm({
         </div>
       </div>
 
+      {/* Блок «интересующий объект» — только для цели «Конкретный объект»
+          (или когда цель не выбрана — обратная совместимость со старым UX). */}
+      {(purpose === '' || purpose === 'SPECIFIC_OBJECT') && (
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <Label>{t('interestProperty')}</Label>
@@ -373,6 +502,7 @@ export function LeadForm({
           {interestMode === 'crm' ? tForm('hintCrm') : tForm('hintNote')}
         </p>
       </div>
+      )}
 
       <div className="space-y-2">
         <Label>{tForm('priority')}</Label>

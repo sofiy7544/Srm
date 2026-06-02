@@ -19,7 +19,7 @@ const ACTOR: CurrentUserPayload = {
 
 function makeService() {
   // Захватываем data, переданную в lead.create — это и есть проверяемое поведение.
-  const created: { data?: { assignedUserId: string | null } } = {};
+  const created: { data?: Record<string, unknown> } = {};
 
   const prisma = {
     client: {
@@ -33,7 +33,7 @@ function makeService() {
     },
     lead: {
       findFirst: jest.fn().mockResolvedValue(null), // нет активного дубля
-      create: jest.fn().mockImplementation((args: { data: { assignedUserId: string | null } }) => {
+      create: jest.fn().mockImplementation((args: { data: Record<string, unknown> }) => {
         created.data = args.data;
         return Promise.resolve({
           id: 'lead-1',
@@ -103,6 +103,34 @@ describe('LeadsService.create — назначение (поток /pool)', () =
       dealIntent: 'BUY',
     });
     expect(created.data?.assignedUserId).toBe('owner-7');
+  });
+
+  it('P0: цель/срочность/бюджет/след.контакт сохраняются в лиде', async () => {
+    const { service, created } = makeService();
+    await service.create(ACTOR, {
+      clientId: 'client-1',
+      stage: LeadStage.NEW,
+      dealIntent: 'BUY',
+      purpose: 'BROWSING',
+      urgency: 'THIS_MONTH',
+      budgetMin: 50000,
+      budgetMax: 150000,
+      budgetCurrency: 'EUR',
+      nextActionAt: '2026-07-01T10:00:00.000Z',
+    });
+    expect(created.data?.purpose).toBe('BROWSING');
+    expect(created.data?.urgency).toBe('THIS_MONTH');
+    expect(created.data?.budgetMin).toBe(50000);
+    expect(created.data?.budgetMax).toBe(150000);
+    expect(created.data?.budgetCurrency).toBe('EUR');
+    expect(created.data?.nextActionAt).toBeInstanceOf(Date);
+  });
+
+  it('P0: лид без объекта и без цели (просто заявка) создаётся', async () => {
+    const { service, created } = makeService();
+    await service.create(ACTOR, { clientId: 'client-1', stage: LeadStage.NEW, dealIntent: 'BUY' });
+    expect(created.data?.purpose).toBeNull();
+    expect(created.data?.interestPropertyId).toBeNull();
   });
 
   it('дедуп: активный лид уже есть → BadRequestException, новый не создаётся', async () => {
