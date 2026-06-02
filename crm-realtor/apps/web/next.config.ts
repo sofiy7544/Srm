@@ -41,7 +41,13 @@ const nextConfig: NextConfig = {
       .replace(/^[<"'\s]+|[>"'\s]+$/g, '')
       .replace(/\/+$/, '');
     if (!target) return [];
-    return [{ source: '/api/:path*', destination: `${target}/api/:path*` }];
+    return [
+      { source: '/api/:path*', destination: `${target}/api/:path*` },
+      // Раздача загруженных медиа: файлы лежат на бэкенде по /uploads/*
+      // (LocalStorageProvider). Без этого rewrite фронт отдаёт 404 и фото
+      // не отображается, хотя загрузка прошла.
+      { source: '/uploads/:path*', destination: `${target}/uploads/:path*` },
+    ];
   },
 };
 
