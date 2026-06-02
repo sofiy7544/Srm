@@ -55,9 +55,15 @@ COPY --from=builder /app/pnpm-workspace.yaml ./
 # файлы node_modules, иначе падает с EACCES под пользователем crm.
 RUN chown -R crm:crm /app
 
+# Каталог для загрузок (LocalStorageProvider). Создаём mount-point /data с
+# владельцем crm ДО монтирования volume — иначе Railway-volume монтируется
+# root-owned и запись под юзером crm падает с EACCES.
+RUN mkdir -p /data/uploads && chown -R crm:crm /data
+
 USER crm
 WORKDIR /app/apps/api
 EXPOSE 3001
 
-# Run migrations then start (exec-форма: одна оболочка sh -c, && срабатывает)
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main.js"]
+# Run migrations then start. mkdir -p UPLOAD_DIR на старте — на случай, если
+# volume смонтирован пустым (каталог uploads внутри него ещё не создан).
+CMD ["sh", "-c", "mkdir -p \"${UPLOAD_DIR:-/data/uploads}\" 2>/dev/null; npx prisma migrate deploy && node dist/main.js"]
