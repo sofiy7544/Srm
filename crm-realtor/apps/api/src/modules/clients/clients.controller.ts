@@ -15,7 +15,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser, CurrentUserPayload } from '../auth/current-user.decorator';
 import { ClientsService } from './clients.service';
 import { ZodValidationPipe } from '../../common/zod-validation.pipe';
-import { clientFilterSchema, type ClientFilter } from '@crm/shared';
+import { clientFilterSchema, mediaUrlSchema, type ClientFilter } from '@crm/shared';
 import {
   createClientSchema,
   updateClientSchema,
@@ -32,7 +32,7 @@ type LogCallInput = z.infer<typeof logCallSchema>;
 // Заметка может прикреплять голосовое (audioUrl + duration в ms). Если voice есть —
 // content может быть пустой (минимум 0). Если voice нет — content обязателен (≥1).
 const voiceMetaSchema = z.object({
-  audioUrl: z.string().url(),
+  audioUrl: mediaUrlSchema,
   durationMs: z.number().int().min(0).max(60 * 60 * 1000), // до 1 часа sanity-cap
   mime: z.string().max(100).optional(),
 });

@@ -18,6 +18,7 @@ import {
   createPropertySchema,
   updatePropertySchema,
   propertyFilterSchema,
+  mediaUrlSchema,
   type CreatePropertyInput,
   type UpdatePropertyInput,
   type PropertyFilter,
@@ -25,7 +26,8 @@ import {
 import { z } from 'zod';
 
 const addPhotoSchema = z.object({
-  url: z.string().url(),
+  // Абсолютный URL (S3/публичный) ИЛИ относительный '/uploads/...' (local storage).
+  url: mediaUrlSchema,
   isCover: z.boolean().optional(),
   kind: z.enum(['PHOTO', 'VIDEO']).optional(),
 });

@@ -1,4 +1,5 @@
 export * from './auth';
+export * from './media';
 export * from './client';
 export * from './property';
 export * from './lead';
