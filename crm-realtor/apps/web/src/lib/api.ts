@@ -306,6 +306,20 @@ export const sources = {
   list: () => api<Source[]>('/api/sources'),
 };
 
+// Извлекает человеческое сообщение об ошибке из тела ответа (NestJS кладёт его
+// в { message }). Падает обратно на statusText, если тела нет.
+async function uploadError(res: Response): Promise<ApiError> {
+  let message = res.statusText;
+  if (res.status === 413) message = 'Файл слишком большой.';
+  try {
+    const data = await res.json();
+    if (data?.message) message = Array.isArray(data.message) ? data.message.join(', ') : data.message;
+  } catch {
+    /* тело не JSON — оставляем statusText */
+  }
+  return new ApiError(res.status, message);
+}
+
 export const uploads = {
   image: async (file: File): Promise<{ key: string; url: string }> => {
     const form = new FormData();
@@ -315,7 +329,7 @@ export const uploads = {
       credentials: 'include',
       body: form,
     });
-    if (!res.ok) throw new ApiError(res.status, res.statusText);
+    if (!res.ok) throw await uploadError(res);
     return res.json();
   },
   /** Универсальная загрузка: image/* или video/*. Сервер сам решает kind. */
@@ -329,7 +343,7 @@ export const uploads = {
       credentials: 'include',
       body: form,
     });
-    if (!res.ok) throw new ApiError(res.status, res.statusText);
+    if (!res.ok) throw await uploadError(res);
     return res.json();
   },
   /** Загрузка голосовой заметки (audio/webm от MediaRecorder в Chrome/Firefox,
@@ -348,7 +362,7 @@ export const uploads = {
       credentials: 'include',
       body: form,
     });
-    if (!res.ok) throw new ApiError(res.status, res.statusText);
+    if (!res.ok) throw await uploadError(res);
     return res.json();
   },
 };
@@ -828,7 +842,7 @@ export const documents = {
       credentials: 'include',
       body: form,
     });
-    if (!res.ok) throw new ApiError(res.status, res.statusText);
+    if (!res.ok) throw await uploadError(res);
     return res.json();
   },
   remove: (id: string) => api<{ ok: true }>(`/api/documents/${id}`, { method: 'DELETE' }),

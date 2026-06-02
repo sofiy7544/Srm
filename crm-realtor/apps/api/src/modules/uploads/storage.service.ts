@@ -1,78 +1,59 @@
 import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import {
-  S3Client,
-  PutObjectCommand,
-  GetObjectCommand,
-  CreateBucketCommand,
-  HeadBucketCommand,
-  PutBucketPolicyCommand,
-} from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { randomUUID } from 'crypto';
+import * as path from 'path';
+import type { BucketKind, StorageProvider } from './storage-provider.interface';
+import { LocalStorageProvider } from './local-storage.provider';
+import { S3StorageProvider } from './s3-storage.provider';
 
-export type BucketKind = 'public' | 'private';
-
+/**
+ * Фасад хранилища. Выбирает провайдер автоматически:
+ *   - если задан S3/MinIO (MINIO_ENDPOINT или AWS_S3_ENDPOINT) → S3StorageProvider
+ *   - иначе → LocalStorageProvider (диск + раздача статикой)
+ *
+ * Публичный API (buildKey/uploadBuffer/signedUrlFromStoredUrl) сохранён —
+ * вызывающий код (uploads, documents) не меняется.
+ */
 @Injectable()
 export class StorageService implements OnModuleInit {
   private readonly logger = new Logger(StorageService.name);
-  private client!: S3Client;
-  private publicBucket!: string;
-  private privateBucket!: string;
-  private publicEndpoint!: string;
+  private provider!: StorageProvider;
 
   constructor(private readonly config: ConfigService) {}
 
   async onModuleInit() {
-    this.publicBucket =
-      this.config.get<string>('MINIO_PUBLIC_BUCKET') ??
-      this.config.get<string>('MINIO_BUCKET') ??
-      'crm-public';
-    this.privateBucket = this.config.get<string>('MINIO_PRIVATE_BUCKET', 'crm-private');
-    this.publicEndpoint = this.config.get<string>('MINIO_ENDPOINT', 'http://localhost:9000');
+    const s3Endpoint =
+      this.config.get<string>('MINIO_ENDPOINT') ??
+      this.config.get<string>('AWS_S3_ENDPOINT');
 
-    this.client = new S3Client({
-      endpoint: this.publicEndpoint,
-      region: 'us-east-1',
-      forcePathStyle: true,
-      credentials: {
-        accessKeyId: this.config.get<string>('MINIO_ROOT_USER', 'minioadmin'),
-        secretAccessKey: this.config.get<string>('MINIO_ROOT_PASSWORD', 'minioadmin_dev'),
-      },
-    });
-
-    await this.ensureBucket(this.publicBucket, true);
-    await this.ensureBucket(this.privateBucket, false);
-  }
-
-  private async ensureBucket(name: string, isPublic: boolean) {
-    try {
-      await this.client.send(new HeadBucketCommand({ Bucket: name }));
-    } catch {
-      try {
-        await this.client.send(new CreateBucketCommand({ Bucket: name }));
-        if (isPublic) {
-          await this.client.send(
-            new PutBucketPolicyCommand({
-              Bucket: name,
-              Policy: JSON.stringify({
-                Version: '2012-10-17',
-                Statement: [
-                  {
-                    Effect: 'Allow',
-                    Principal: { AWS: ['*'] },
-                    Action: ['s3:GetObject'],
-                    Resource: [`arn:aws:s3:::${name}/*`],
-                  },
-                ],
-              }),
-            }),
-          );
-        }
-        this.logger.log(`Created ${isPublic ? 'public' : 'private'} bucket: ${name}`);
-      } catch (e) {
-        this.logger.warn(`Bucket setup skipped for ${name}: ${(e as Error).message}`);
-      }
+    if (s3Endpoint) {
+      const s3 = new S3StorageProvider({
+        endpoint: s3Endpoint,
+        region: this.config.get<string>('AWS_REGION', 'us-east-1'),
+        accessKeyId:
+          this.config.get<string>('MINIO_ROOT_USER') ??
+          this.config.get<string>('AWS_ACCESS_KEY_ID', 'minioadmin'),
+        secretAccessKey:
+          this.config.get<string>('MINIO_ROOT_PASSWORD') ??
+          this.config.get<string>('AWS_SECRET_ACCESS_KEY', 'minioadmin_dev'),
+        publicBucket:
+          this.config.get<string>('MINIO_PUBLIC_BUCKET') ??
+          this.config.get<string>('MINIO_BUCKET', 'crm-public'),
+        privateBucket: this.config.get<string>('MINIO_PRIVATE_BUCKET', 'crm-private'),
+      });
+      await s3.init();
+      this.provider = s3;
+      this.logger.log(`Storage: S3-compatible (${s3Endpoint})`);
+    } else {
+      const rootDir = path.resolve(this.config.get<string>('UPLOAD_DIR', 'uploads'));
+      const baseUrl =
+        this.config.get<string>('PUBLIC_BASE_URL') ??
+        this.config.get<string>('APP_URL') ??
+        '';
+      this.provider = new LocalStorageProvider(rootDir, baseUrl);
+      this.logger.warn(
+        `Storage: LOCAL disk (${rootDir}). Для продакшена с большим объёмом медиа задайте MINIO_ENDPOINT/AWS_S3_ENDPOINT.`,
+      );
     }
   }
 
@@ -81,50 +62,11 @@ export class StorageService implements OnModuleInit {
     return `${prefix}/${randomUUID()}.${ext}`;
   }
 
-  async uploadBuffer(
-    key: string,
-    body: Buffer,
-    contentType: string,
-    kind: BucketKind = 'public',
-  ): Promise<{ key: string; url: string; bucket: string; kind: BucketKind }> {
-    const bucket = kind === 'private' ? this.privateBucket : this.publicBucket;
-    await this.client.send(
-      new PutObjectCommand({
-        Bucket: bucket,
-        Key: key,
-        Body: body,
-        ContentType: contentType,
-      }),
-    );
-    const url =
-      kind === 'public'
-        ? this.publicUrl(bucket, key)
-        : await this.signedDownloadUrl(bucket, key);
-    return { key, url, bucket, kind };
+  uploadBuffer(key: string, body: Buffer, contentType: string, kind: BucketKind = 'public') {
+    return this.provider.uploadBuffer(key, body, contentType, kind);
   }
 
-  publicUrl(bucket: string, key: string): string {
-    return `${this.publicEndpoint}/${bucket}/${key}`;
-  }
-
-  async signedDownloadUrl(bucket: string, key: string, ttlSeconds = 3600): Promise<string> {
-    return getSignedUrl(
-      this.client,
-      new GetObjectCommand({ Bucket: bucket, Key: key }),
-      { expiresIn: ttlSeconds },
-    );
-  }
-
-  async signedUrlFromStoredUrl(storedUrl: string, ttlSeconds = 3600): Promise<string> {
-    try {
-      const u = new URL(storedUrl);
-      const [, bucket, ...rest] = u.pathname.split('/');
-      if (!bucket || rest.length === 0) return storedUrl;
-      if (bucket === this.publicBucket) return storedUrl;
-      const key = rest.join('/');
-      return await this.signedDownloadUrl(bucket, key, ttlSeconds);
-    } catch {
-      return storedUrl;
-    }
+  signedUrlFromStoredUrl(storedUrl: string, ttlSeconds = 3600): Promise<string> {
+    return this.provider.resolveUrl(storedUrl, ttlSeconds);
   }
 }

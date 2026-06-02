@@ -3,6 +3,8 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import cookieParser from 'cookie-parser';
+import * as express from 'express';
+import * as path from 'path';
 import * as argon2 from 'argon2';
 import { UserRole } from '@prisma/client';
 import { AppModule } from './app.module';
@@ -52,6 +54,13 @@ async function bootstrap() {
   });
 
   app.use(cookieParser());
+
+  // Раздача локально загруженных медиа (LocalStorageProvider кладёт файлы в
+  // UPLOAD_DIR и строит URL вида <base>/uploads/<key>). Регистрируем ДО
+  // глобального префикса 'api', чтобы путь оставался /uploads/*, не /api/uploads.
+  const uploadDir = path.resolve(config.get<string>('UPLOAD_DIR', 'uploads'));
+  app.use('/uploads', express.static(uploadDir, { maxAge: '7d', fallthrough: false }));
+
   app.setGlobalPrefix('api');
   app.useGlobalPipes(
     new ValidationPipe({

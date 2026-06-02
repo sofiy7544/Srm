@@ -47,3 +47,8 @@ packages/shared/dist/
 
 # Docker data
 .docker-data/
+
+# Local media uploads (LocalStorageProvider) — только корневые каталоги,
+# НЕ трогаем src/modules/uploads/ (это код).
+/uploads/
+/apps/api/uploads/
