@@ -16,6 +16,7 @@ import { formatDateTime, formatPrice } from '@/lib/formatters';
 import { ActivityTimeline } from '@/components/activity-timeline';
 import { ClientActions } from '@/components/client-actions';
 import { ClientChat } from '@/components/client-chat';
+import { ClientContactsCard } from '@/components/client-contacts-card';
 import { NotesPanel } from '@/components/notes-panel';
 import { SourceIcon } from '@/components/source-badge';
 import { ScheduleShowingDialog } from '@/components/schedule-showing-dialog';
@@ -286,7 +287,13 @@ export default function ClientDetailPage() {
 
       <div className="grid lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 space-y-4">
-          <ClientChat client={client} />
+          {/* Messaging composer only when integrations are enabled; otherwise a
+              static contacts block (no Telegram/WhatsApp/Instagram/Email/Call). */}
+          {process.env.NEXT_PUBLIC_INTEGRATIONS_ENABLED === 'true' ? (
+            <ClientChat client={client} />
+          ) : (
+            <ClientContactsCard client={client} />
+          )}
           {/* Заметки — отдельный persistent раздел (текст + голосовые).
               ClientActions ниже остаётся только для лога звонка / email — это
               разные UX-цели (заметки нужны постоянно, лог звонка — иногда). */}

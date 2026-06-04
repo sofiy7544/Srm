@@ -632,6 +632,8 @@
   },
   "presentation": {
     "sendToClient": "Envoyer au client",
+    "copyLink": "Copier le lien",
+    "linkCopied": "Lien copié",
     "preview": "Aperçu",
     "selectClient": "Choisir un client",
     "sent": "Présentation envoyée",

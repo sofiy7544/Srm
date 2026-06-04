@@ -34,7 +34,7 @@ type NavRole = 'all' | 'admin'; // 'admin' = ADMIN or MANAGER
 // Team is reachable from /insights for admins.
 const NAV_ITEMS: { href: string; icon: typeof Home; key: string; role: NavRole }[] = [
   { href: '/today', icon: Home, key: 'today', role: 'all' },
-  { href: '/pool', icon: Inbox, key: 'inbox', role: 'all' },
+  { href: '/pool', icon: Inbox, key: 'pool', role: 'all' },
   { href: '/pipeline', icon: KanbanSquare, key: 'pipeline', role: 'all' },
   { href: '/contacts', icon: Users, key: 'contacts', role: 'all' },
   { href: '/inventory', icon: Building2, key: 'inventory', role: 'all' },

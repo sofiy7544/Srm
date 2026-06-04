@@ -638,6 +638,8 @@
   },
   "presentation": {
     "sendToClient": "Send to client",
+    "copyLink": "Copy link",
+    "linkCopied": "Link copied",
     "preview": "Preview",
     "selectClient": "Choose client",
     "sent": "Presentation sent",

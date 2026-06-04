@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, redirect } from "next/navigation";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import {
@@ -80,6 +80,14 @@ const QUALIFY_EMPTY: QualifyState = {
 
 /* ─── Page ─────────────────────────────────────────────────────────────────── */
 export default function InboxPage() {
+  // Internal messaging (Telegram/WhatsApp/Instagram/Email/Call) is disabled
+  // behind NEXT_PUBLIC_INTEGRATIONS_ENABLED. While off, the chat screen must
+  // never open — send users to the Pool. The chat code below stays intact and
+  // re-activates when the flag is set to 'true'.
+  if (process.env.NEXT_PUBLIC_INTEGRATIONS_ENABLED !== 'true') {
+    redirect('/pool');
+  }
+
   const router  = useRouter();
   const tStatus = useTranslations("inbox.status");
   const tQual   = useTranslations("inbox.qualify");
