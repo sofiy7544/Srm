@@ -14,7 +14,7 @@ import { clients, leads as leadsApi, uploads, users as usersApi, type ClientDeta
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { formatDateTime, formatPrice } from '@/lib/formatters';
 import { ActivityTimeline } from '@/components/activity-timeline';
-import { ClientActions } from '@/components/client-actions';
+import { PersonQuickActions } from '@/components/person-quick-actions';
 import { ClientChat } from '@/components/client-chat';
 import { ClientContactsCard } from '@/components/client-contacts-card';
 import { NotesPanel } from '@/components/notes-panel';
@@ -301,7 +301,15 @@ export default function ClientDetailPage() {
             clientId={client.id}
             onChanged={() => setReload((r) => r + 1)}
           />
-          <ClientActions client={client} onActivity={() => setReload((r) => r + 1)} />
+          <PersonQuickActions
+            client={client}
+            lead={clientLeads.find((l) => l.stage !== 'WON' && l.stage !== 'LOST') ?? null}
+            agents={agentsList}
+            onChanged={() => setReload((r) => r + 1)}
+            onViewHistory={() =>
+              document.getElementById('person-history')?.scrollIntoView({ behavior: 'smooth' })
+            }
+          />
         </div>
 
         <div className="space-y-4">
@@ -531,7 +539,9 @@ export default function ClientDetailPage() {
         </div>
       </div>
 
-      <ActivityTimeline key={reload} source="client" id={client.id} />
+      <div id="person-history">
+        <ActivityTimeline key={reload} source="client" id={client.id} />
+      </div>
 
       <ScheduleShowingDialog
         client={client}
