@@ -28,7 +28,7 @@
     "inventory": "Immobili",
     "insights": "Analisi",
     "more": "Altro",
-    "pool": "Pool",
+    "pool": "Nuove richieste",
     "team": "Team"
   },
   "auth": {
@@ -632,6 +632,8 @@
   },
   "presentation": {
     "sendToClient": "Invia al cliente",
+    "copyLink": "Copia link",
+    "linkCopied": "Link copiato",
     "preview": "Anteprima",
     "selectClient": "Seleziona cliente",
     "sent": "Presentazione inviata",

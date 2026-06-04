@@ -92,7 +92,8 @@ export function HotkeysProvider() {
   // Go-to navigation. react-hotkeys-hook supports key sequences via comma-less
   // notation like 'g>t' for "press G, then T".
   useHotkeys('g>t', () => router.push('/today'), [router]);
-  useHotkeys('g>i', () => router.push('/inbox'), [router]);
+  // Messaging/chat is disabled (INTEGRATIONS_ENABLED=false) — G→I goes to the Pool.
+  useHotkeys('g>i', () => router.push('/pool'), [router]);
   useHotkeys('g>p', () => router.push('/pipeline'), [router]);
   useHotkeys('g>c', () => router.push('/calendar'), [router]);
 

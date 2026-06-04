@@ -238,7 +238,7 @@ export function CommandPalette() {
           className="text-[11px] font-semibold uppercase tracking-eyebrow text-muted-foreground/80 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5"
         >
           <Item icon={Home} label={tNav('today')} shortcut="G T" onSelect={() => go('/today')} />
-          <Item icon={Inbox} label={tNav('inbox')} shortcut="G I" onSelect={() => go('/inbox')} />
+          <Item icon={Inbox} label={tNav('pool')} shortcut="G I" onSelect={() => go('/pool')} />
           <Item
             icon={KanbanSquare}
             label={tNav('pipeline')}

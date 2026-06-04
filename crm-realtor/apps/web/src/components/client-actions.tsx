@@ -23,6 +23,10 @@ import {
 } from '@/lib/api';
 import { VoiceRecorder } from '@/components/voice-recorder';
 
+// Channel actions (WhatsApp/Telegram/Email) are disabled behind the flag.
+// Log Call and Add Note are manual activity logging and stay available.
+const INTEGRATIONS_ON = process.env.NEXT_PUBLIC_INTEGRATIONS_ENABLED === 'true';
+
 type Mode = 'idle' | 'call' | 'note' | 'email';
 
 export function ClientActions({
@@ -80,36 +84,40 @@ export function ClientActions({
             <Phone className="h-4 w-4" />
             {t('logCall')}
           </Button>
-          <Button variant="outline" size="sm" asChild>
-            <a
-              href={`https://wa.me/${waNumber}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => {
-                void clientActions.addNote(client.id, t('whatsappOpened')).then(onActivity);
-              }}
-            >
-              <MessageSquare className="h-4 w-4" />
-              {t('openWhatsApp')}
-            </a>
-          </Button>
-          {tgContact && (
-            <Button variant="outline" size="sm" asChild>
-              <a
-                href={`https://t.me/${tgContact.identifier.replace(/^@/, '')}`}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Send className="h-4 w-4" />
-                Telegram
-              </a>
-            </Button>
-          )}
-          {client.email && (
-            <Button variant="outline" size="sm" onClick={() => setMode('email')}>
-              <Mail className="h-4 w-4" />
-              {t('sendEmail')}
-            </Button>
+          {INTEGRATIONS_ON && (
+            <>
+              <Button variant="outline" size="sm" asChild>
+                <a
+                  href={`https://wa.me/${waNumber}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => {
+                    void clientActions.addNote(client.id, t('whatsappOpened')).then(onActivity);
+                  }}
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  {t('openWhatsApp')}
+                </a>
+              </Button>
+              {tgContact && (
+                <Button variant="outline" size="sm" asChild>
+                  <a
+                    href={`https://t.me/${tgContact.identifier.replace(/^@/, '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Send className="h-4 w-4" />
+                    Telegram
+                  </a>
+                </Button>
+              )}
+              {client.email && (
+                <Button variant="outline" size="sm" onClick={() => setMode('email')}>
+                  <Mail className="h-4 w-4" />
+                  {t('sendEmail')}
+                </Button>
+              )}
+            </>
           )}
           <Button variant="outline" size="sm" onClick={() => setMode('note')}>
             <FileText className="h-4 w-4" />

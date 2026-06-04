@@ -63,6 +63,12 @@ const STAGES: LeadStage[] = [
   'NEW', 'CONTACTED', 'QUALIFIED', 'SHOWING', 'NEGOTIATION', 'WON', 'LOST',
 ];
 
+// Internal messaging/calls are disabled behind NEXT_PUBLIC_INTEGRATIONS_ENABLED.
+// When off (default), the lead card shows no chat composer / channel tabs — only
+// a Contacts block + Activity/Notes. The chat code (ChatPanel/CHANNELS) is kept
+// and re-enabled by flipping the flag.
+const INTEGRATIONS_ON = process.env.NEXT_PUBLIC_INTEGRATIONS_ENABLED === 'true';
+
 type Channel = 'TELEGRAM' | 'WHATSAPP' | 'INSTAGRAM' | 'EMAIL' | 'PHONE';
 
 const CHANNELS: {
@@ -305,6 +311,7 @@ export default function LeadDetailPage() {
   const tStages = useTranslations('leads.stages');
   const tPriority = useTranslations('leads.priority');
   const tIntent = useTranslations('clients.intent');
+  const tNav = useTranslations('nav');
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const id = params?.id;
@@ -316,7 +323,7 @@ export default function LeadDetailPage() {
   const [agents, setAgents]   = useState<UserBriefList[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch]   = useState('');
-  const [tab, setTab]         = useState<'chat' | 'notes' | 'activity'>('chat');
+  const [tab, setTab]         = useState<'chat' | 'notes' | 'activity'>(INTEGRATIONS_ON ? 'chat' : 'activity');
   const [savingStage, setSavingStage]       = useState(false);
   const [savingAssign, setSavingAssign]     = useState(false);
   const [savingPriority, setSavingPriority] = useState(false);
@@ -513,17 +520,19 @@ export default function LeadDetailPage() {
             </a>
           </div>
           <div className="ml-auto flex items-center gap-1">
-            <button
-              onClick={() => setTab('chat')}
-              className={cn(
-                'text-xs px-2.5 py-1 rounded-md transition-colors',
-                tab === 'chat'
-                  ? 'bg-primary/10 text-primary font-medium'
-                  : 'text-muted-foreground hover:bg-muted',
-              )}
-            >
-              {t('tabChat')}
-            </button>
+            {INTEGRATIONS_ON && (
+              <button
+                onClick={() => setTab('chat')}
+                className={cn(
+                  'text-xs px-2.5 py-1 rounded-md transition-colors',
+                  tab === 'chat'
+                    ? 'bg-primary/10 text-primary font-medium'
+                    : 'text-muted-foreground hover:bg-muted',
+                )}
+              >
+                {t('tabChat')}
+              </button>
+            )}
             <button
               onClick={() => setTab('notes')}
               className={cn(
@@ -548,18 +557,35 @@ export default function LeadDetailPage() {
             </button>
           </div>
         </div>
-        <div className="flex-1 min-h-0">
-          {tab === 'chat' && <ChatPanel lead={lead} />}
-          {tab === 'notes' && (
-            <div className="p-4 overflow-y-auto h-full">
-              <NotesPanel clientId={lead.clientId} leadId={lead.id} />
+        <div className="flex-1 min-h-0 flex flex-col">
+          {/* Integrations off → static Contacts block instead of the chat panel. */}
+          {!INTEGRATIONS_ON && (
+            <div className="px-4 py-3 border-b border-border shrink-0">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+                {tNav('contacts')}
+              </h3>
+              <a
+                href={`tel:${lead.client.primaryPhone}`}
+                className="inline-flex items-center gap-2 text-sm hover:text-primary transition-colors"
+              >
+                <Phone className="h-4 w-4 text-muted-foreground" />
+                {lead.client.primaryPhone}
+              </a>
             </div>
           )}
-          {tab === 'activity' && (
-            <div className="p-4 overflow-y-auto h-full">
-              <ActivityTimeline source="lead" id={lead.id} />
-            </div>
-          )}
+          <div className="flex-1 min-h-0">
+            {INTEGRATIONS_ON && tab === 'chat' && <ChatPanel lead={lead} />}
+            {tab === 'notes' && (
+              <div className="p-4 overflow-y-auto h-full">
+                <NotesPanel clientId={lead.clientId} leadId={lead.id} />
+              </div>
+            )}
+            {tab === 'activity' && (
+              <div className="p-4 overflow-y-auto h-full">
+                <ActivityTimeline source="lead" id={lead.id} />
+              </div>
+            )}
+          </div>
         </div>
       </main>
 

@@ -31,7 +31,7 @@ import { cn } from '@/lib/utils';
  */
 const NAV_ITEMS = [
   { href: '/today', icon: Home, key: 'today' as const },
-  { href: '/pool', icon: Inbox, key: 'inbox' as const },
+  { href: '/pool', icon: Inbox, key: 'pool' as const },
   { href: '/pipeline', icon: KanbanSquare, key: 'pipeline' as const },
   { href: '/contacts', icon: Users, key: 'contacts' as const },
   { href: '/inventory', icon: Building2, key: 'inventory' as const },
