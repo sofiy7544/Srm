@@ -171,14 +171,38 @@ export class PropertiesService {
 
   async addPhoto(
     propertyId: string,
-    url: string,
-    isCover = false,
-    kind: 'PHOTO' | 'VIDEO' = 'PHOTO',
+    media: {
+      url: string;
+      isCover?: boolean;
+      kind?: 'PHOTO' | 'VIDEO';
+      thumbnailUrl?: string | null;
+      posterUrl?: string | null;
+      blurhash?: string | null;
+      width?: number | null;
+      height?: number | null;
+      durationMs?: number | null;
+      mimeType?: string | null;
+      sizeBytes?: number | null;
+    },
   ) {
     await this.getById(propertyId);
     const order = await this.prisma.propertyPhoto.count({ where: { propertyId } });
     return this.prisma.propertyPhoto.create({
-      data: { propertyId, url, order, isCover, kind },
+      data: {
+        propertyId,
+        url: media.url,
+        order,
+        isCover: media.isCover ?? false,
+        kind: media.kind ?? 'PHOTO',
+        thumbnailUrl: media.thumbnailUrl ?? null,
+        posterUrl: media.posterUrl ?? null,
+        blurhash: media.blurhash ?? null,
+        width: media.width ?? null,
+        height: media.height ?? null,
+        durationMs: media.durationMs ?? null,
+        mimeType: media.mimeType ?? null,
+        sizeBytes: media.sizeBytes ?? null,
+      },
     });
   }
 
@@ -187,6 +211,45 @@ export class PropertiesService {
       where: { id: photoId, propertyId },
     });
     return { ok: true };
+  }
+
+  /** Persist a new display order. `ids` is the full ordered list for this property. */
+  async reorderPhotos(propertyId: string, ids: string[]) {
+    // Only reorder rows that actually belong to this property (guards against
+    // stale/foreign ids). Done in a transaction so order is consistent.
+    const owned = await this.prisma.propertyPhoto.findMany({
+      where: { propertyId, id: { in: ids } },
+      select: { id: true },
+    });
+    const ownedSet = new Set(owned.map((p) => p.id));
+    const ordered = ids.filter((id) => ownedSet.has(id));
+    await this.prisma.$transaction(
+      ordered.map((id, index) =>
+        this.prisma.propertyPhoto.update({ where: { id }, data: { order: index } }),
+      ),
+    );
+    return this.prisma.propertyPhoto.findMany({
+      where: { propertyId },
+      orderBy: { order: 'asc' },
+    });
+  }
+
+  /** Mark one photo as cover, clearing the flag on all others. */
+  async setCover(propertyId: string, photoId: string) {
+    await this.prisma.$transaction([
+      this.prisma.propertyPhoto.updateMany({
+        where: { propertyId },
+        data: { isCover: false },
+      }),
+      this.prisma.propertyPhoto.updateMany({
+        where: { id: photoId, propertyId },
+        data: { isCover: true },
+      }),
+    ]);
+    return this.prisma.propertyPhoto.findMany({
+      where: { propertyId },
+      orderBy: { order: 'asc' },
+    });
   }
 
   /**

@@ -197,6 +197,9 @@
     "noPhotos": "Медіа поки немає",
     "dropzoneTitle": "Перетягніть фото або відео сюди",
     "dropzoneHint": "JPG, PNG, WEBP до 10 МБ · MP4, WEBM до 80 МБ",
+    "coverUpdated": "Обкладинку оновлено",
+    "removed": "Медіа видалено",
+    "undo": "Скасувати",
     "types": {
       "APARTMENT": "Квартира",
       "HOUSE": "Будинок",

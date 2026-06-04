@@ -197,6 +197,9 @@
     "noPhotos": "Aucun média pour l'instant",
     "dropzoneTitle": "Déposez photos ou vidéos ici",
     "dropzoneHint": "JPG, PNG, WEBP jusqu'à 10 Mo · MP4, WEBM jusqu'à 80 Mo",
+    "coverUpdated": "Photo de couverture mise à jour",
+    "removed": "Média supprimé",
+    "undo": "Annuler",
     "types": {
       "APARTMENT": "Appartement",
       "HOUSE": "Maison",
