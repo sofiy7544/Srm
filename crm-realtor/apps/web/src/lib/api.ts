@@ -164,6 +164,29 @@ export interface PropertyPhoto {
   kind: 'PHOTO' | 'VIDEO';
   order: number;
   isCover: boolean;
+  // Telegram-grade media metadata. Optional/nullable: older media predates the
+  // pipeline and the UI falls back to `url`.
+  thumbnailUrl?: string | null;
+  posterUrl?: string | null;
+  blurhash?: string | null;
+  width?: number | null;
+  height?: number | null;
+  durationMs?: number | null;
+}
+
+/** Response of POST /api/uploads/media — base fields always present, metadata best-effort. */
+export interface MediaUpload {
+  key: string;
+  url: string;
+  kind: 'PHOTO' | 'VIDEO';
+  size?: number;
+  contentType?: string;
+  thumbnailUrl?: string | null;
+  posterUrl?: string | null;
+  blurhash?: string | null;
+  width?: number | null;
+  height?: number | null;
+  durationMs?: number | null;
 }
 
 export type DealIntent = 'BUY' | 'RENT';
@@ -293,13 +316,35 @@ export const properties = {
   update: (id: string, body: PropertyPayload) =>
     api<PropertyDetailed>(`/api/properties/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
   remove: (id: string) => api<{ ok: true }>(`/api/properties/${id}`, { method: 'DELETE' }),
-  addPhoto: (id: string, url: string, isCover = false, kind: 'PHOTO' | 'VIDEO' = 'PHOTO') =>
+  addPhoto: (
+    id: string,
+    media: Partial<MediaUpload> & { url: string; isCover?: boolean; kind?: 'PHOTO' | 'VIDEO' },
+  ) =>
     api<PropertyPhoto>(`/api/properties/${id}/photos`, {
       method: 'POST',
-      body: JSON.stringify({ url, isCover, kind }),
+      body: JSON.stringify({
+        url: media.url,
+        isCover: media.isCover ?? false,
+        kind: media.kind ?? 'PHOTO',
+        thumbnailUrl: media.thumbnailUrl ?? null,
+        posterUrl: media.posterUrl ?? null,
+        blurhash: media.blurhash ?? null,
+        width: media.width ?? null,
+        height: media.height ?? null,
+        durationMs: media.durationMs ?? null,
+        mimeType: media.contentType ?? null,
+        sizeBytes: media.size ?? null,
+      }),
     }),
   removePhoto: (id: string, photoId: string) =>
     api<{ ok: true }>(`/api/properties/${id}/photos/${photoId}`, { method: 'DELETE' }),
+  reorderPhotos: (id: string, ids: string[]) =>
+    api<PropertyPhoto[]>(`/api/properties/${id}/photos/reorder`, {
+      method: 'PATCH',
+      body: JSON.stringify({ ids }),
+    }),
+  setCover: (id: string, photoId: string) =>
+    api<PropertyPhoto[]>(`/api/properties/${id}/photos/${photoId}/cover`, { method: 'PATCH' }),
 };
 
 export const sources = {
@@ -332,10 +377,9 @@ export const uploads = {
     if (!res.ok) throw await uploadError(res);
     return res.json();
   },
-  /** Универсальная загрузка: image/* или video/*. Сервер сам решает kind. */
-  media: async (
-    file: File,
-  ): Promise<{ key: string; url: string; kind: 'PHOTO' | 'VIDEO' }> => {
+  /** Универсальная загрузка: image/* или video/*. Сервер сам решает kind и
+   *  возвращает thumbnail/poster/blurhash/dims/duration (best-effort). */
+  media: async (file: File): Promise<MediaUpload> => {
     const form = new FormData();
     form.append('file', file);
     const res = await fetch(`${API_BASE}/api/uploads/media`, {
@@ -345,6 +389,55 @@ export const uploads = {
     });
     if (!res.ok) throw await uploadError(res);
     return res.json();
+  },
+  /**
+   * Same as `media` but reports upload progress (0..1) via XHR. Used by the
+   * messenger-style uploader to show per-file progress rings. `signal` allows
+   * cancelling an in-flight upload.
+   */
+  mediaWithProgress: (
+    file: File,
+    onProgress?: (fraction: number) => void,
+    signal?: AbortSignal,
+  ): Promise<MediaUpload> => {
+    return new Promise<MediaUpload>((resolve, reject) => {
+      const form = new FormData();
+      form.append('file', file);
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `${API_BASE}/api/uploads/media`);
+      xhr.withCredentials = true;
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable && onProgress) onProgress(e.loaded / e.total);
+      };
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            resolve(JSON.parse(xhr.responseText) as MediaUpload);
+          } catch {
+            reject(new ApiError(xhr.status, 'Bad upload response'));
+          }
+        } else {
+          let message = xhr.status === 413 ? 'Файл слишком большой.' : xhr.statusText;
+          try {
+            const data = JSON.parse(xhr.responseText);
+            if (data?.message) message = Array.isArray(data.message) ? data.message.join(', ') : data.message;
+          } catch {
+            /* keep default */
+          }
+          reject(new ApiError(xhr.status, message));
+        }
+      };
+      xhr.onerror = () => reject(new ApiError(0, 'Network error during upload'));
+      xhr.onabort = () => reject(new ApiError(0, 'Upload cancelled'));
+      if (signal) {
+        if (signal.aborted) {
+          xhr.abort();
+          return;
+        }
+        signal.addEventListener('abort', () => xhr.abort(), { once: true });
+      }
+      xhr.send(form);
+    });
   },
   /** Загрузка голосовой заметки (audio/webm от MediaRecorder в Chrome/Firefox,
    *  audio/mp4 в Safari/iOS). Сервер кладёт в `voice-notes/` и возвращает URL. */

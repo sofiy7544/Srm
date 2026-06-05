@@ -458,6 +458,18 @@ model PropertyPhoto {
   isCover    Boolean           @default(false) @map("is_cover")
   createdAt  DateTime          @default(now()) @map("created_at")
 
+  // Media-experience metadata (Telegram-grade gallery). All nullable — existing
+  // rows stay NULL and the frontend falls back to `url`. Populated at upload time
+  // (best-effort) and via the backfill script.
+  thumbnailUrl String? @map("thumbnail_url") // small webp for fast grid loading
+  posterUrl    String? @map("poster_url") // video first-frame JPEG poster
+  blurhash     String? // compact blurred placeholder shown instantly
+  width        Int? // intrinsic media width (px)
+  height       Int? // intrinsic media height (px)
+  durationMs   Int?    @map("duration_ms") // video length in milliseconds
+  mimeType     String? @map("mime_type")
+  sizeBytes    Int?    @map("size_bytes")
+
   property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
 
   @@index([propertyId, order])

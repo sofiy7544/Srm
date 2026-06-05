@@ -197,6 +197,9 @@
     "noPhotos": "Медиа пока нет",
     "dropzoneTitle": "Перетащите фото или видео сюда",
     "dropzoneHint": "JPG, PNG, WEBP до 10 МБ · MP4, WEBM до 80 МБ",
+    "coverUpdated": "Обложка обновлена",
+    "removed": "Медиа удалено",
+    "undo": "Отменить",
     "types": {
       "APARTMENT": "Квартира",
       "HOUSE": "Дом",

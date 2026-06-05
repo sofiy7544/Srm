@@ -9,6 +9,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { StorageService } from './storage.service';
+import { MediaProcessor } from './media-processor';
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024; //  10 MB images
 const MAX_VIDEO_BYTES = 80 * 1024 * 1024; //  80 MB videos
@@ -57,7 +58,10 @@ function resolveMime(mime: string, originalName: string): string {
 @Controller('uploads')
 @UseGuards(JwtAuthGuard)
 export class UploadsController {
-  constructor(private readonly storage: StorageService) {}
+  constructor(
+    private readonly storage: StorageService,
+    private readonly mediaProcessor: MediaProcessor,
+  ) {}
 
   /** Старый эндпойнт — оставляем для совместимости (только image). */
   @Post('image')
@@ -102,12 +106,24 @@ export class UploadsController {
     const folder = kind === 'VIDEO' ? 'properties/videos' : 'properties';
     const key = this.storage.buildKey(folder, file.originalname);
     const result = await this.storage.uploadBuffer(key, file.buffer, mime, 'public');
+
+    // Best-effort enrichment (thumbnail, blurhash, poster, dims, duration).
+    // derive() is contractually non-throwing/bounded — the upload has already
+    // succeeded above, so a processing failure can never turn this into a 500.
+    const meta = await this.mediaProcessor.derive(kind, result.key, file.buffer, mime);
+
     return {
       key: result.key,
       url: result.url,
       kind,
       size: file.size,
       contentType: mime,
+      thumbnailUrl: meta.thumbnailUrl ?? null,
+      posterUrl: meta.posterUrl ?? null,
+      blurhash: meta.blurhash ?? null,
+      width: meta.width ?? null,
+      height: meta.height ?? null,
+      durationMs: meta.durationMs ?? null,
     };
   }
 

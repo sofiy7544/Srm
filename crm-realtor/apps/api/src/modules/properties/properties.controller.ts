@@ -30,8 +30,22 @@ const addPhotoSchema = z.object({
   url: mediaUrlSchema,
   isCover: z.boolean().optional(),
   kind: z.enum(['PHOTO', 'VIDEO']).optional(),
+  // Telegram-grade media metadata (best-effort, produced by the upload pipeline).
+  thumbnailUrl: mediaUrlSchema.optional().nullable(),
+  posterUrl: mediaUrlSchema.optional().nullable(),
+  blurhash: z.string().max(200).optional().nullable(),
+  width: z.number().int().positive().optional().nullable(),
+  height: z.number().int().positive().optional().nullable(),
+  durationMs: z.number().int().nonnegative().optional().nullable(),
+  mimeType: z.string().max(120).optional().nullable(),
+  sizeBytes: z.number().int().nonnegative().optional().nullable(),
 });
 type AddPhotoInput = z.infer<typeof addPhotoSchema>;
+
+const reorderPhotosSchema = z.object({
+  ids: z.array(z.string().uuid()).min(1).max(200),
+});
+type ReorderPhotosInput = z.infer<typeof reorderPhotosSchema>;
 
 @Controller('properties')
 @UseGuards(JwtAuthGuard)
@@ -90,7 +104,25 @@ export class PropertiesController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body(new ZodValidationPipe(addPhotoSchema)) body: AddPhotoInput,
   ) {
-    return this.properties.addPhoto(id, body.url, body.isCover, body.kind);
+    return this.properties.addPhoto(id, body);
+  }
+
+  /** Persist a new drag-and-drop order. Body: { ids: [...] } in display order. */
+  @Patch(':id/photos/reorder')
+  reorderPhotos(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body(new ZodValidationPipe(reorderPhotosSchema)) body: ReorderPhotosInput,
+  ) {
+    return this.properties.reorderPhotos(id, body.ids);
+  }
+
+  /** Mark one photo as the cover (unsets the others). */
+  @Patch(':id/photos/:photoId/cover')
+  setCover(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('photoId', ParseUUIDPipe) photoId: string,
+  ) {
+    return this.properties.setCover(id, photoId);
   }
 
   @Delete(':id/photos/:photoId')
