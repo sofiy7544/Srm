@@ -38,13 +38,16 @@ import {
 } from '@/components/ui/select';
 import {
   leads,
+  clients,
   messages as messagesApi,
   users,
+  type ClientDetailed,
   type LeadDetailed,
   type LeadStage,
   type MessageRow,
   type UserBriefList,
 } from '@/lib/api';
+import { PersonQuickActions } from '@/components/person-quick-actions';
 import { useAuthStore } from '@/lib/auth-store';
 import { formatDate, formatPrice } from '@/lib/formatters';
 import { ActivityTimeline } from '@/components/activity-timeline';
@@ -319,6 +322,7 @@ export default function LeadDetailPage() {
   const currentUser = useAuthStore((s) => s.user);
 
   const [lead, setLead]       = useState<LeadDetailed | null>(null);
+  const [personClient, setPersonClient] = useState<ClientDetailed | null>(null);
   const [list, setList]       = useState<LeadDetailed[]>([]);
   const [agents, setAgents]   = useState<UserBriefList[]>([]);
   const [loading, setLoading] = useState(true);
@@ -345,6 +349,14 @@ export default function LeadDetailPage() {
       .catch(() => setLead(null))
       .finally(() => setLoading(false));
   }, [id]);
+
+  // Load the full client behind this lead so the shared quick-action bar has the
+  // same data the client card has (needed for Schedule Showing / contacts).
+  // Not a generic loader — just the person this lead is about.
+  useEffect(() => {
+    if (!lead?.clientId) return;
+    clients.get(lead.clientId).then(setPersonClient).catch(() => setPersonClient(null));
+  }, [lead?.clientId]);
 
   const reloadLead = useCallback(async () => {
     if (!id) return;
@@ -557,6 +569,18 @@ export default function LeadDetailPage() {
             </button>
           </div>
         </div>
+        {/* Shared quick-action bar — identical to the client card. */}
+        {personClient && (
+          <div className="px-4 py-3 border-b border-border shrink-0">
+            <PersonQuickActions
+              client={personClient}
+              lead={lead}
+              agents={agents}
+              onChanged={reloadLead}
+              onViewHistory={() => setTab('activity')}
+            />
+          </div>
+        )}
         <div className="flex-1 min-h-0 flex flex-col">
           {/* Integrations off → static Contacts block instead of the chat panel. */}
           {!INTEGRATIONS_ON && (
