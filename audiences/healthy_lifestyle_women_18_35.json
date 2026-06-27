@@ -1,0 +1,21 @@
+{
+  "name": "Healthy Lifestyle Women 18-35",
+  "description": "Women interested in healthy eating, wellness and active lifestyle.",
+  "type": "saved_audience",
+  "targeting_spec": {
+    "geo_locations": { "countries": ["UA"] },
+    "genders": [2],
+    "age_min": 18,
+    "age_max": 35,
+    "flexible_spec": [
+      {
+        "interests": [
+          { "name": "Healthy diet", "id": "REPLACE_WITH_INTEREST_ID" },
+          { "name": "Wellness", "id": "REPLACE_WITH_INTEREST_ID" },
+          { "name": "Yoga", "id": "6003139266461" }
+        ]
+      }
+    ],
+    "publisher_platforms": ["instagram", "facebook"]
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "name": "Lookalike Paid Customers",
+  "description": "1% lookalike built from the 'paid' customers Custom Audience. Create the source Custom Audience first, then reference its id below.",
+  "type": "lookalike",
+  "lookalike_spec": {
+    "origin_audience_id": "REPLACE_WITH_SOURCE_CUSTOM_AUDIENCE_ID",
+    "country": "UA",
+    "ratio": 0.01,
+    "type": "similarity"
+  }
+}

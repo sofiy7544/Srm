@@ -1,0 +1,13 @@
+[project]
+name = "stanley-fitness-audience-crm"
+version = "0.1.0"
+description = "Legal warm-audience collection & CRM via official Meta APIs only."
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"

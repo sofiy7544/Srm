@@ -1,0 +1,22 @@
+{
+  "name": "Retargeting Lead Form Opened 14d",
+  "description": "Engagement Custom Audience of people who opened the Lead Ad form in the last 14 days but may not have submitted.",
+  "type": "engagement_custom_audience",
+  "subtype": "ENGAGEMENT",
+  "retention_days": 14,
+  "rule": {
+    "inclusions": {
+      "operator": "or",
+      "rules": [
+        {
+          "event_sources": [{ "type": "lead_gen_form", "id": "REPLACE_WITH_LEAD_FORM_ID" }],
+          "retention_seconds": 1209600,
+          "filter": {
+            "operator": "and",
+            "filters": [{ "field": "event", "operator": "eq", "value": "lead_form_opened" }]
+          }
+        }
+      ]
+    }
+  }
+}

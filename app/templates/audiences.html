@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %} · audiences{% endblock %}
+{% block content %}
+<h1>Custom Audiences</h1>
+<p class="muted">Audiences are built from <b>consented</b> leads only and uploaded hashed via the Marketing API. JSON targeting templates live in <code>/audiences</code>.</p>
+<table>
+  <tr><th>Name</th><th>Subtype</th><th>Meta ID</th><th>≈ Size</th><th>Last sync</th><th>Action</th></tr>
+  {% for a in audiences %}
+  <tr>
+    <td>{{ a.name }}<br><span class="muted">{{ a.description or '' }}</span></td>
+    <td><span class="pill">{{ a.subtype }}</span></td>
+    <td class="muted">{{ a.meta_audience_id or '— not created' }}</td>
+    <td>{{ a.approx_count }}</td>
+    <td class="muted">{{ a.last_synced_at.strftime('%Y-%m-%d %H:%M') if a.last_synced_at else '—' }}</td>
+    <td><button class="btn" onclick="push({{ a.id }})">Push to Meta</button></td>
+  </tr>
+  {% else %}
+  <tr><td colspan="6" class="muted">No audiences yet. Seed them with <code>python -m scripts.seed_audiences</code>.</td></tr>
+  {% endfor %}
+</table>
+<script>
+function push(id){
+  fetch('/api/meta/audiences/'+id+'/push',{method:'POST'})
+    .then(r=>r.json()).then(d=>{ alert(JSON.stringify(d)); location.reload(); })
+    .catch(e=>alert('Error: '+e));
+}
+</script>
+{% endblock %}

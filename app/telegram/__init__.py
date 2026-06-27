@@ -1,0 +1,1 @@
+"""Telegram manager bot package."""

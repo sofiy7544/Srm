@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %} · settings{% endblock %}
+{% block content %}
+<h1>Settings</h1>
+<p class="muted">Configuration is read from the environment (<code>.env</code>). Secrets are never displayed — only whether they are set.</p>
+<div class="card" style="max-width:560px;">
+  <table style="background:transparent; border:none;">
+    {% for k, v in config.items() %}
+    <tr><td class="muted">{{ k }}</td><td><b>{{ v }}</b></td></tr>
+    {% endfor %}
+  </table>
+</div>
+<p style="margin-top:16px;">
+  Meta status:
+  {% if meta_configured %}<span class="badge" style="color:#3ecf8e;">configured ✓</span>
+  {% else %}<span class="badge hot">not configured</span>{% endif %}
+</p>
+<p class="muted">To change values, edit <code>.env</code> and restart the app. See <code>README_DEPLOY.md</code> for the Meta Business Manager setup steps.</p>
+{% endblock %}
