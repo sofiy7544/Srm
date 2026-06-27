@@ -61,6 +61,19 @@ Telegram Bot ⇄ Backend (FastAPI) ⇄ Database (Postgres/SQLite)
 
 ---
 
+## One-click start
+
+```bash
+./start.sh        # Linux / macOS
+start.bat         # Windows (double-click)
+```
+
+The launcher creates `.env` from the template, then starts the **full stack with
+Docker** (API + Postgres + Redis + worker + beat + bot) and seeds demo data — or
+falls back to a local SQLite run if Docker isn't installed. Then open
+<http://localhost:8000> (login `admin` / `admin12345`). Fill in your Meta /
+Telegram tokens in `.env` when ready (see `README_DEPLOY.md`).
+
 ## Quick start (local, no Docker)
 
 ```bash
