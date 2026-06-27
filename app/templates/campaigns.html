@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %} · campaigns{% endblock %}
+{% block content %}
+<h1>Campaigns</h1>
+<p><button class="btn" onclick="sync()">Sync from Meta</button> <span class="muted">Pulls campaigns + insights via Marketing API.</span></p>
+<table>
+  <tr><th>Name</th><th>Status</th><th>Objective</th><th>Impr.</th><th>Clicks</th><th>Spend</th><th>Leads</th></tr>
+  {% for c in campaigns %}
+  <tr>
+    <td>{{ c.name or c.meta_campaign_id }}</td>
+    <td><span class="pill">{{ c.status or '—' }}</span></td>
+    <td class="muted">{{ c.objective or '—' }}</td>
+    <td>{{ c.impressions }}</td>
+    <td>{{ c.clicks }}</td>
+    <td>{{ '%.2f'|format(c.spend) }}</td>
+    <td>{{ c.leads }}</td>
+  </tr>
+  {% else %}
+  <tr><td colspan="7" class="muted">No campaigns synced yet.</td></tr>
+  {% endfor %}
+</table>
+<script>
+function sync(){
+  fetch('/api/meta/sync/campaigns',{method:'POST'})
+    .then(r=>r.json()).then(d=>{ alert('Synced: '+JSON.stringify(d)); location.reload(); })
+    .catch(e=>alert('Error: '+e));
+}
+</script>
+{% endblock %}

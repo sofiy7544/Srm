@@ -1,0 +1,20 @@
+{
+  "name": "Fitness Stanley UA",
+  "description": "Ukrainian fitness + Stanley/tumbler interest audience for cold prospecting.",
+  "type": "saved_audience",
+  "targeting_spec": {
+    "geo_locations": { "countries": ["UA"] },
+    "age_min": 18,
+    "age_max": 45,
+    "flexible_spec": [
+      {
+        "interests": [
+          { "name": "Physical fitness", "id": "6003107902433" },
+          { "name": "Stanley (brand)", "id": "REPLACE_WITH_INTEREST_ID" },
+          { "name": "Tumbler / reusable bottle", "id": "REPLACE_WITH_INTEREST_ID" }
+        ]
+      }
+    ],
+    "publisher_platforms": ["facebook", "instagram"]
+  }
+}

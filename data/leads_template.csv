@@ -1,0 +1,4 @@
+name,phone,email,telegram,instagram,city,source,campaign_id,adset_id,ad_id,interest,tags,consent
+Jane Doe,+380501234567,jane@example.com,@jane,@jane.fit,Kyiv,csv_import,,,,stanley,"stanley,vip",true
+John Smith,+380671112233,john@example.com,@johnny,,Lviv,csv_import,,,,fitness,fitness,true
+Olha K,+380931002030,,,@olha.water,Odesa,csv_import,,,,water,water,false

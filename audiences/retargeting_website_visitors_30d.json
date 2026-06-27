@@ -1,0 +1,22 @@
+{
+  "name": "Retargeting Website Visitors 30d",
+  "description": "Website Custom Audience of all landing visitors in the last 30 days (Pixel-based).",
+  "type": "website_custom_audience",
+  "subtype": "WEBSITE",
+  "retention_days": 30,
+  "rule": {
+    "inclusions": {
+      "operator": "or",
+      "rules": [
+        {
+          "event_sources": [{ "type": "pixel", "id": "REPLACE_WITH_PIXEL_ID" }],
+          "retention_seconds": 2592000,
+          "filter": {
+            "operator": "and",
+            "filters": [{ "field": "event", "operator": "eq", "value": "PageView" }]
+          }
+        }
+      ]
+    }
+  }
+}

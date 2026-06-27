@@ -1,13 +1,31 @@
-# macOS metadata
-._*
-.DS_Store
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
 
-# Backup archives
-*.tar.gz
-*.zip
-*.tar.bz2
-
-# Environment files (also enforced by crm-realtor/.gitignore)
+# Env / secrets
 .env
 .env.local
-.env.*.local
+*.pem
+
+# Data
+*.sqlite3
+*.db
+data/exports/
+data/uploads/
+
+# Logs
+*.log
+logs/
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
+
+# Build
+dist/
+build/

@@ -1,0 +1,62 @@
+# Render.com blueprint — one-click deploy.
+# Docs: https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: stanley-crm-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: starter
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: stanley-crm-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: stanley-crm-redis
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: VERIFY_TOKEN
+        sync: false
+      - key: META_APP_ID
+        sync: false
+      - key: META_APP_SECRET
+        sync: false
+      - key: META_ACCESS_TOKEN
+        sync: false
+      - key: META_AD_ACCOUNT_ID
+        sync: false
+      - key: META_PAGE_ID
+        sync: false
+      - key: META_PIXEL_ID
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+
+  - type: worker
+    name: stanley-crm-worker
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerCommand: celery -A app.tasks.celery_app worker --loglevel=info
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: stanley-crm-db
+          property: connectionString
+      - key: CELERY_BROKER_URL
+        fromService:
+          type: redis
+          name: stanley-crm-redis
+          property: connectionString
+
+  - type: redis
+    name: stanley-crm-redis
+    plan: starter
+    ipAllowList: []
+
+databases:
+  - name: stanley-crm-db
+    plan: starter

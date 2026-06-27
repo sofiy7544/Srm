@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %} · dashboard{% endblock %}
+{% block content %}
+<h1>Dashboard</h1>
+<div class="cards">
+  <div class="card"><div class="n">{{ total }}</div><div class="l">Total leads</div></div>
+  <div class="card"><div class="n">{{ consented }}</div><div class="l">Consented</div></div>
+  <div class="card"><div class="n">{{ by_status.get('new', 0) }}</div><div class="l">New</div></div>
+  <div class="card"><div class="n">{{ by_status.get('interested', 0) }}</div><div class="l">Interested</div></div>
+  <div class="card"><div class="n">{{ by_status.get('paid', 0) }}</div><div class="l">Paid</div></div>
+</div>
+
+<h1>🔥 Hot leads</h1>
+<table>
+  <tr><th>ID</th><th>Name</th><th>Interest</th><th>Source</th><th>Score</th><th>Status</th></tr>
+  {% for l in hot %}
+  <tr>
+    <td>#{{ l.id }}</td>
+    <td>{{ l.name or '—' }}</td>
+    <td>{{ l.interest or '—' }}</td>
+    <td><span class="pill">{{ l.source or '—' }}</span></td>
+    <td class="score">{{ l.score }}</td>
+    <td><span class="badge hot">{{ l.status.value }}</span></td>
+  </tr>
+  {% else %}
+  <tr><td colspan="6" class="muted">No hot leads yet.</td></tr>
+  {% endfor %}
+</table>
+
+<h1 style="margin-top:28px;">Recent activity</h1>
+<table>
+  <tr><th>When</th><th>Category</th><th>Message</th></tr>
+  {% for log in recent_logs %}
+  <tr><td class="muted">{{ log.created_at.strftime('%m-%d %H:%M') }}</td><td><span class="pill">{{ log.category }}</span></td><td>{{ log.message }}</td></tr>
+  {% else %}
+  <tr><td colspan="3" class="muted">No activity yet.</td></tr>
+  {% endfor %}
+</table>
+{% endblock %}

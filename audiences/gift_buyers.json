@@ -1,0 +1,21 @@
+{
+  "name": "Gift Buyers",
+  "description": "Shoppers likely to buy gifts (seasonal / occasion-based).",
+  "type": "saved_audience",
+  "targeting_spec": {
+    "geo_locations": { "countries": ["UA"] },
+    "age_min": 20,
+    "age_max": 55,
+    "flexible_spec": [
+      {
+        "interests": [
+          { "name": "Gifts", "id": "REPLACE_WITH_INTEREST_ID" }
+        ],
+        "behaviors": [
+          { "name": "Engaged shoppers", "id": "6002714895372" }
+        ]
+      }
+    ],
+    "publisher_platforms": ["facebook", "instagram"]
+  }
+}

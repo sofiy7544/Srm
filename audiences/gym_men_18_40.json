@@ -1,0 +1,21 @@
+{
+  "name": "Gym Men 18-40",
+  "description": "Men interested in gym, bodybuilding and sports nutrition.",
+  "type": "saved_audience",
+  "targeting_spec": {
+    "geo_locations": { "countries": ["UA"] },
+    "genders": [1],
+    "age_min": 18,
+    "age_max": 40,
+    "flexible_spec": [
+      {
+        "interests": [
+          { "name": "Gym", "id": "REPLACE_WITH_INTEREST_ID" },
+          { "name": "Bodybuilding", "id": "6003384248805" },
+          { "name": "Protein (nutrient)", "id": "REPLACE_WITH_INTEREST_ID" }
+        ]
+      }
+    ],
+    "publisher_platforms": ["facebook", "instagram"]
+  }
+}
