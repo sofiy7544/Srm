@@ -68,7 +68,6 @@ def _fetch_and_map_lead(leadgen_id: str, value: dict) -> dict:
     """Pull lead detail from Graph API and map to our schema. Degrades safely."""
     name = phone = email = city = None
     try:
-        raw = meta_client.fetch_leads_for_form  # type: ignore[attr-defined]
         # We fetch the single lead object directly via Graph for accuracy.
         import httpx
 
