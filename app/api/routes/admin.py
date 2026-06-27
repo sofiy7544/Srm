@@ -10,6 +10,7 @@ from app.models.audience import Audience
 from app.models.campaign import Campaign
 from app.models.lead import Lead, LeadStatus
 from app.models.log import ActivityLog
+from app.models.post import PostStatus, PostTarget, ScheduledPost
 from app.services import leads as lead_service
 from app.services.csv_io import export_csv, import_csv, template_csv
 from app.services.scoring import is_hot
@@ -171,6 +172,66 @@ def settings_page(request: Request, user: str = Depends(require_admin)):
             "meta_configured": cfg.meta_configured,
         },
     )
+
+
+@router.get("/posts")
+def posts_page(request: Request, db: Session = Depends(get_db), user: str = Depends(require_admin)):
+    rows = list(
+        db.scalars(select(ScheduledPost).order_by(ScheduledPost.scheduled_at.desc()).limit(200))
+    )
+    return templates.TemplateResponse(
+        "posts.html",
+        {
+            "request": request,
+            "user": user,
+            "active": "posts",
+            "posts": rows,
+            "targets": list(PostTarget),
+        },
+    )
+
+
+@router.post("/posts/create")
+def create_post(
+    message: str = Form(...),
+    target: str = Form("facebook"),
+    image_url: str = Form(""),
+    scheduled_at: str = Form(""),
+    db: Session = Depends(get_db),
+    user: str = Depends(require_admin),
+):
+    from datetime import datetime, timezone
+
+    when = datetime.now(timezone.utc)
+    if scheduled_at:
+        try:
+            when = datetime.fromisoformat(scheduled_at)
+            if when.tzinfo is None:
+                when = when.replace(tzinfo=timezone.utc)
+        except ValueError:
+            pass
+    post = ScheduledPost(
+        message=message,
+        target=PostTarget(target),
+        image_url=image_url or None,
+        scheduled_at=when,
+        status=PostStatus.scheduled,
+    )
+    db.add(post)
+    lead_service.log(db, "post", f"Scheduled post for {target} at {when.isoformat()}")
+    db.commit()
+    return RedirectResponse(url="/posts", status_code=303)
+
+
+@router.post("/posts/{post_id}/cancel")
+def cancel_post(
+    post_id: int, db: Session = Depends(get_db), user: str = Depends(require_admin)
+):
+    post = db.get(ScheduledPost, post_id)
+    if post and post.status == PostStatus.scheduled:
+        post.status = PostStatus.canceled
+        db.commit()
+    return RedirectResponse(url="/posts", status_code=303)
 
 
 @router.get("/logs")

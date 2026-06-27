@@ -48,13 +48,26 @@ python -m app.core.security hash "your-strong-password"
 1. **Business Settings → Users → System Users → Add** → create a system user (Admin).
 2. **Add Assets** → assign your **Ad Account**, **Page**, and **Pixel** with full control.
 3. **Generate New Token** → select your App → check scopes:
-   - `ads_management`
-   - `ads_read`
-   - `leads_retrieval`
-   - `pages_manage_metadata`
-   - `pages_read_engagement`
-   - `business_management`
+
+   | Permission | Used for |
+   |------------|----------|
+   | `ads_management`, `ads_read` | campaigns, insights, Custom Audiences |
+   | `leads_retrieval` | pulling Lead Ads submissions |
+   | `pages_read_engagement`, `pages_manage_metadata` | Page access |
+   | `pages_manage_posts` | scheduled posting to the Page |
+   | `pages_messaging` | replying to Messenger conversations (Send API) |
+   | `instagram_basic`, `instagram_content_publish` | publishing to Instagram |
+   | `instagram_manage_messages` | replying to Instagram DMs |
+   | `business_management` | system-user / asset access |
+
 4. Copy the token into `META_ACCESS_TOKEN`. System-user tokens don't expire.
+5. For Instagram, find your **IG Business account id** (linked to the Page) and
+   put it in `META_IG_USER_ID`
+   (`GET /{page-id}?fields=instagram_business_account`).
+
+> **Token = the legal equivalent of a password here.** The app never asks for or
+> stores your Facebook password; it acts only through this OAuth token with the
+> scopes above. Revoke it anytime in Business Settings.
 
 ---
 
@@ -81,12 +94,42 @@ Verify events in **Events Manager → Test Events** by visiting a landing page.
 4. **Verify Token:** the exact value of your `VERIFY_TOKEN`.
 5. Click **Verify and Save** — Meta calls `GET /webhooks/meta`; the app echoes
    the challenge automatically.
-6. **Subscribe** to the **`leadgen`** field.
+6. **Subscribe** to the **`leadgen`** field (and **`messages`** if you want
+   auto-replies — see §4b).
 7. In **Business Settings → Integrations → Webhooks**, make sure your Page is
    subscribed to the App.
 
 Now every Lead Ad submission POSTs to `/webhooks/meta`; the app fetches the full
-lead via the Graph API, scores it, stores it, and pings your Telegram bot.
+lead via the Graph API, scores it, stores it, and pings your Telegram bot
+(with **✉️ Ответить / 🛠 В работу / ✅ Закрыт** buttons).
+
+## 4b. Auto-replies (Messenger / Instagram) — optional
+
+The same webhook endpoint handles inbound DMs.
+
+1. In **App → Webhooks → Page**, also subscribe to **`messages`** (and
+   `messaging_postbacks`). For Instagram, subscribe the **Instagram** object to
+   **`messages`** and connect your IG Business account.
+2. When someone **messages your Page/IG first**, the app:
+   - sends an automatic greeting + qualification via the official **Send API**,
+   - captures them as a lead (`source = messenger_dm` / `instagram_dm`),
+   - notifies your Telegram bot.
+3. Customize the greeting in `app/services/messaging.py` (`DEFAULT_GREETING`).
+
+> ⚖️ **Policy:** replies are sent **only** to people who contacted you first,
+> within Meta's standard messaging window. No unsolicited messages, no messaging
+> of strangers.
+
+## 4c. Scheduled posting
+
+1. Open the **Posts** page in the admin panel → write a message, pick target
+   (Facebook / Instagram / both), optionally an image URL, and a publish time
+   (UTC). Instagram **requires** a public `image_url`.
+2. The Celery **beat** scheduler (running in `docker compose`) checks every
+   minute and publishes due posts via the Graph API
+   (`/{page}/feed` · `/{page}/photos` · IG `media` + `media_publish`).
+3. Requires `pages_manage_posts` (+ `instagram_content_publish` for IG) and, for
+   Instagram, `META_IG_USER_ID`.
 
 You can also **bulk-pull** existing leads from the admin panel or:
 

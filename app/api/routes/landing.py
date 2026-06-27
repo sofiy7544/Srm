@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.event import PixelEvent
 from app.services import leads as lead_service
-from app.services.notifications import notify_manager
+from app.services.notifications import lead_action_keyboard, notify_manager
 from app.services.scoring import is_hot
 from app.templating import templates
 
@@ -70,7 +70,8 @@ def landing_lead(
 
     tag = "🔥 HOT" if is_hot(lead.score) else "new"
     notify_manager(
-        f"<b>{tag} landing lead</b> #{lead.id} ({segment})\nScore: {lead.score}"
+        f"<b>{tag} landing lead</b> #{lead.id} ({segment})\nScore: {lead.score}",
+        buttons=lead_action_keyboard(lead.id),
     )
     return templates.TemplateResponse(
         "landing/thanks.html", {"request": request, "segment": segment, "cfg": cfg}

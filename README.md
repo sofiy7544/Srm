@@ -32,13 +32,32 @@ Conversions API and Custom Audiences.
 - **CRM leads** — full pipeline (`new → contacted → interested → price_sent → ordered → paid → rejected → archived`), search, filtering, manager comments.
 - **Lead scoring** — transparent rule-based `lead_score()` (unit-tested).
 - **Meta Lead Ads** — webhook receiver + bulk sync from lead forms.
+- **Scheduled posting** — schedule posts to your Facebook Page / Instagram Business; a Celery-beat scheduler publishes them via the Graph API (the same official endpoints Mixpost/Postiz use).
+- **Auto-replies** — inbound Messenger / Instagram DMs are answered automatically via the official **Send API** and captured as leads. *Only replies to people who message you first — no unsolicited outreach.*
 - **Custom Audiences** — built from *consented* leads, hashed before upload.
 - **Pixel + landing pages** — 5 segmented landings firing PageView / ViewContent / Lead / AddToCart / Purchase.
 - **Conversions API** — optional server-side event mirroring.
-- **Telegram bot** — new-lead alerts, lead cards, status changes, reminders, `/stats`, `/today`, `/hot`.
+- **Telegram bot** — new-lead alerts **with inline buttons** (✉️ Ответить · 🛠 В работу · ✅ Закрыт), lead cards, status changes, reminders, `/stats`, `/today`, `/hot`.
 - **CSV** — import / export / downloadable template.
 - **Audience JSON templates** — 8 ready-to-use targeting specs in `/audiences`.
 - **Security** — env-only secrets, admin auth, rate limiting, PII-redacting logs.
+
+### Architecture
+
+```
+Telegram Bot ⇄ Backend (FastAPI) ⇄ Database (Postgres/SQLite)
+                     ⇅
+              Meta Graph API  (Lead Ads · Send API · Page/IG publish · Audiences · Pixel/CAPI)
+                     ⇅
+              Admin Dashboard  +  Celery worker/beat (scheduler)
+```
+
+> **Reference projects studied (official-API / OAuth only):**
+> [Postiz](https://github.com/gitroomhq/postiz-app) and
+> [Mixpost](https://github.com/inovector/mixpost) for scheduled publishing
+> patterns; the [facebook-python-business-sdk](https://github.com/facebook/facebook-python-business-sdk)
+> and `pymessenger`/`fbmessenger` patterns for the Send API. No code that logs
+> in by password, scrapes, or emulates clicks was used.
 
 ---
 

@@ -14,7 +14,8 @@ from app.database import get_db
 from app.models.event import PixelEvent
 from app.services import leads as lead_service
 from app.services import meta_client
-from app.services.notifications import notify_manager
+from app.services.messaging import auto_reply
+from app.services.notifications import lead_action_keyboard, notify_manager
 from app.services.scoring import is_hot
 
 router = APIRouter(tags=["webhooks"])
@@ -41,8 +42,10 @@ async def receive_webhook(request: Request, db: Session = Depends(get_db)):
     receive raw PII in the webhook body itself) and upsert it.
     """
     body = await request.json()
+    obj = body.get("object")  # 'page' (leadgen + messenger) or 'instagram'
     processed = 0
     for entry in body.get("entry", []):
+        # 1) Lead Ads change notifications
         for change in entry.get("changes", []):
             if change.get("field") != "leadgen":
                 continue
@@ -55,13 +58,57 @@ async def receive_webhook(request: Request, db: Session = Depends(get_db)):
             db.commit()
             processed += 1
             if created:
-                tag = "🔥 HOT" if is_hot(lead.score) else "new"
-                notify_manager(
-                    f"<b>{tag} lead</b> #{lead.id}\n"
-                    f"Score: {lead.score}\nInterest: {lead.interest or '—'}\n"
-                    f"Source: {lead.source}"
-                )
+                _notify_new_lead(lead)
+
+        # 2) Inbound messages (Messenger / Instagram) -> auto-reply + capture lead
+        for event in entry.get("messaging", []):
+            processed += _handle_inbound_message(db, event, obj)
+
     return JSONResponse({"received": True, "processed": processed})
+
+
+def _notify_new_lead(lead) -> None:
+    """Telegram alert with inline action buttons for a freshly captured lead."""
+    tag = "🔥 HOT" if is_hot(lead.score) else "new"
+    notify_manager(
+        f"<b>{tag} lead</b> #{lead.id}\n"
+        f"Score: {lead.score}\nInterest: {lead.interest or '—'}\n"
+        f"Source: {lead.source}",
+        buttons=lead_action_keyboard(lead.id),
+    )
+
+
+def _handle_inbound_message(db: Session, event: dict, obj: str | None) -> int:
+    """Reply to a person who messaged us first and record them as a lead.
+
+    Compliant: only responds to inbound conversations the user initiated.
+    """
+    sender = (event.get("sender") or {}).get("id")
+    message = event.get("message") or {}
+    text = message.get("text")
+    # Ignore echoes of our own outbound messages.
+    if not sender or message.get("is_echo"):
+        return 0
+
+    platform = "instagram" if obj == "instagram" else "messenger"
+    field = "instagram" if platform == "instagram" else "telegram"
+    data = {
+        field: sender,
+        "source": f"{platform}_dm",
+        "tags": f"{platform}_inbound",
+        # The person contacted us directly => they consented to be replied to.
+        "consent": True,
+    }
+    lead, created = lead_service.upsert_by_external_id(db, f"{platform}:{sender}", data)
+    if text:
+        lead_service.log(db, "message", f"Inbound {platform} msg for lead #{lead.id}")
+    db.commit()
+
+    if created:
+        # First message in a new conversation -> greet & qualify automatically.
+        auto_reply(sender, platform)
+        _notify_new_lead(lead)
+    return 1
 
 
 def _fetch_and_map_lead(leadgen_id: str, value: dict) -> dict:

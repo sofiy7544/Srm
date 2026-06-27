@@ -143,6 +143,46 @@ async def cmd_comment(update, context):
     await update.message.reply_text("Comment saved ✅")
 
 
+async def on_callback(update, context):
+    """Handle inline-button presses on lead notifications.
+
+    callback_data formats: lead_reply:<id> | lead_work:<id> | lead_close:<id>
+    """
+    query = update.callback_query
+    await query.answer()
+    action, _, raw_id = query.data.partition(":")
+    try:
+        lead_id = int(raw_id)
+    except ValueError:
+        return
+
+    with SessionLocal() as db:
+        lead = db.get(Lead, lead_id)
+        if not lead:
+            await query.edit_message_text("Lead not found.")
+            return
+
+        if action == "lead_reply":
+            # Show contact details so the manager can respond.
+            await query.message.reply_html(
+                f"✉️ <b>Contact lead #{lead.id}</b>\n"
+                f"Name: {lead.name or '—'}\n"
+                f"Phone: {lead.phone or '—'}\n"
+                f"Telegram: {lead.telegram or '—'}\n"
+                f"Instagram: {lead.instagram or '—'}"
+            )
+            return
+
+        if action == "lead_work":
+            lead_service.set_status(db, lead, LeadStatus.contacted)
+            db.commit()
+            await query.edit_message_text(f"🛠 Lead #{lead.id} → <b>в работе</b>", parse_mode="HTML")
+        elif action == "lead_close":
+            lead_service.set_status(db, lead, LeadStatus.archived)
+            db.commit()
+            await query.edit_message_text(f"✅ Lead #{lead.id} → <b>закрыт</b>", parse_mode="HTML")
+
+
 async def cmd_remind(update, context):
     if len(context.args) < 3:
         await update.message.reply_text("Usage: /remind <id> <minutes> <text>")
@@ -164,12 +204,13 @@ async def cmd_remind(update, context):
 
 def build_application():
     """Construct the PTB application with all handlers registered."""
-    from telegram.ext import Application, CommandHandler
+    from telegram.ext import Application, CallbackQueryHandler, CommandHandler
 
     if not settings.telegram_bot_token:
         raise RuntimeError("TELEGRAM_BOT_TOKEN is not set")
 
     app = Application.builder().token(settings.telegram_bot_token).build()
+    app.add_handler(CallbackQueryHandler(on_callback))
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("help", cmd_start))
     app.add_handler(CommandHandler("stats", cmd_stats))

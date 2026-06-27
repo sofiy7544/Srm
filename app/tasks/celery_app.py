@@ -36,4 +36,8 @@ celery_app.conf.beat_schedule = {
         "task": "app.tasks.jobs.sync_lead_forms_task",
         "schedule": 900.0,
     },
+    "publish-due-posts-every-minute": {
+        "task": "app.tasks.jobs.publish_scheduled_posts_task",
+        "schedule": 60.0,
+    },
 }

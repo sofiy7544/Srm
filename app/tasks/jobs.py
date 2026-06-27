@@ -65,3 +65,12 @@ def sync_lead_forms_task(self):
                 created += int(was_created)
         db.commit()
     return {"created": created}
+
+
+@celery_app.task(name="app.tasks.jobs.publish_scheduled_posts_task", bind=True, max_retries=2)
+def publish_scheduled_posts_task(self):
+    """Publish any scheduled posts whose time has come (Page/Instagram)."""
+    from app.services.publisher import publish_due_posts
+
+    with SessionLocal() as db:
+        return publish_due_posts(db)

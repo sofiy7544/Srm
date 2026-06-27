@@ -4,6 +4,7 @@ from app.models.event import PixelEvent
 from app.models.audience import Audience
 from app.models.campaign import Campaign
 from app.models.log import ActivityLog
+from app.models.post import ScheduledPost, PostTarget, PostStatus
 
 __all__ = [
     "Lead",
@@ -12,4 +13,7 @@ __all__ = [
     "Audience",
     "Campaign",
     "ActivityLog",
+    "ScheduledPost",
+    "PostTarget",
+    "PostStatus",
 ]

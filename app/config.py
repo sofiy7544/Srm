@@ -40,6 +40,7 @@ class Settings(BaseSettings):
     meta_access_token: str = ""
     meta_ad_account_id: str = ""
     meta_page_id: str = ""
+    meta_ig_user_id: str = ""
     meta_pixel_id: str = ""
     meta_api_version: str = "v21.0"
     verify_token: str = "choose-a-random-verify-token"

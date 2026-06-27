@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %} · posts{% endblock %}
+{% block content %}
+<h1>Scheduled posts</h1>
+<p class="muted">Publishes to your Facebook Page / Instagram Business via the official Graph API. The scheduler checks every minute and posts when the time comes.</p>
+
+<div class="card" style="max-width:640px; margin-bottom:24px;">
+  <form method="post" action="/posts/create">
+    <label class="muted">Message / caption</label>
+    <textarea name="message" rows="3" style="width:100%;" required placeholder="New Stanley Quencher in stock! 🥤"></textarea>
+    <div class="row" style="display:flex; gap:10px; margin-top:10px;">
+      <div style="flex:1;">
+        <label class="muted">Target</label>
+        <select name="target" style="width:100%;">
+          {% for t in targets %}<option value="{{ t.value }}">{{ t.value }}</option>{% endfor %}
+        </select>
+      </div>
+      <div style="flex:2;">
+        <label class="muted">Image URL (required for Instagram)</label>
+        <input name="image_url" style="width:100%;" placeholder="https://…/photo.jpg" />
+      </div>
+    </div>
+    <label class="muted" style="margin-top:10px; display:block;">Publish at (UTC, leave empty = now)</label>
+    <input name="scheduled_at" type="datetime-local" />
+    <button class="btn" type="submit" style="margin-top:12px;">Schedule post</button>
+  </form>
+</div>
+
+<table>
+  <tr><th>ID</th><th>When (UTC)</th><th>Target</th><th>Message</th><th>Status</th><th>Action</th></tr>
+  {% for p in posts %}
+  <tr>
+    <td>#{{ p.id }}</td>
+    <td class="muted">{{ p.scheduled_at.strftime('%Y-%m-%d %H:%M') }}</td>
+    <td><span class="pill">{{ p.target.value }}</span></td>
+    <td>{{ p.message[:60] }}{% if p.message|length > 60 %}…{% endif %}
+        {% if p.error %}<br><span class="badge hot">{{ p.error[:60] }}</span>{% endif %}</td>
+    <td>
+      {% if p.status.value == 'published' %}<span class="badge" style="color:#3ecf8e;">published</span>
+      {% elif p.status.value == 'failed' %}<span class="badge hot">failed</span>
+      {% else %}<span class="pill">{{ p.status.value }}</span>{% endif %}
+    </td>
+    <td>
+      {% if p.status.value == 'scheduled' %}
+      <form method="post" action="/posts/{{ p.id }}/cancel"><button class="btn ghost" type="submit">Cancel</button></form>
+      {% endif %}
+    </td>
+  </tr>
+  {% else %}
+  <tr><td colspan="6" class="muted">No posts scheduled yet.</td></tr>
+  {% endfor %}
+</table>
+{% endblock %}
