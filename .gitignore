@@ -1,13 +1,25 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+
+# env & secrets
+.env
+.env.local
+.env.*.local
+
+# persistent browser profile (contains your logged-in sessions!)
+.chrome-profile/
+
 # macOS metadata
 ._*
 .DS_Store
 
-# Backup archives
+# archives
 *.tar.gz
 *.zip
 *.tar.bz2
 
-# Environment files (also enforced by crm-realtor/.gitignore)
-.env
-.env.local
-.env.*.local
+# logs
+*.log
